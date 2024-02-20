@@ -8,3 +8,15 @@ sudo curl -L --output /usr/bin/rpi-update https://raw.githubusercontent.com/rasp
 
 2.
 sudo rpi-update
+
+3.
+sudo apt update
+sudo apt upgrade
+
+4.
+# https://medium.com/python-mvp/upgrade-python-3-10-to-3-11-on-ubuntu-22-04-2f63e4d326f9
+
+5. Set DAGSTER_HOME:
+
+echo DAGSTER_HOME=$HOME/dagster-home
+
