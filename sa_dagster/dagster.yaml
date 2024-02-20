@@ -1,0 +1,5 @@
+
+# https://docs.dagster.io/deployment/dagster-instance
+storage:
+  sqlite:
+    base_dir: storage/sqlite
