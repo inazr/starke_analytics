@@ -20,3 +20,4 @@ sudo apt upgrade
 
 echo DAGSTER_HOME=$HOME/dagster-home
 
+# echo DAGSTER_HOME=/Users/stephan/PycharmProjects/starke_analytics/sa_dagster
