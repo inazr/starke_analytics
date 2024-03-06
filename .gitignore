@@ -160,3 +160,7 @@ cython_debug/
 #.idea/
 /sa_dagster/storage/sqlite/
 /playground/
+
+#duckdb
+/duckdb/
+!/duckdb/starke_praxis.duckdb
