@@ -27,6 +27,13 @@ def git_pull():
 
 
 @asset
+def git_push():
+    os.system('git add .')
+    os.system('git commit -m "auto commit"')
+    os.system('git push')
+
+
+@asset
 def get_local_ip():
     # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
