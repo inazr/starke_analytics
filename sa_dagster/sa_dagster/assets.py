@@ -54,7 +54,7 @@ def get_local_ip():
 
 
 @asset(deps=[get_local_ip],
-       group_name="discover network")
+       group_name="discover_network")
 def get_list_of_host_with_open_mssql_port():
     # https://www.tutorialspoint.com/python_penetration_testing/python_penetration_testing_network_scanner.htm
 
@@ -79,7 +79,7 @@ def get_list_of_host_with_open_mssql_port():
 
 
 @asset(deps=[get_list_of_host_with_open_mssql_port],
-       group_name="discover network")
+       group_name="discover_network")
 def get_correct_db():
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
 
@@ -108,7 +108,7 @@ def get_correct_db():
 
 
 @asset(deps=[get_correct_db],
-       group_name="discover network")
+       group_name="discover_network")
 def create_starke_schema(duckdb: DuckDBResource) -> None:
     create_schema_query = """
                             CREATE SCHEMA IF NOT EXISTS starke
