@@ -21,19 +21,19 @@ config = configparser.ConfigParser()
 config.read(CONFIG_FILE_PATH)
 
 
-@asset
+@asset(group_name="git")
 def git_pull():
     os.system('git pull')
 
 
-@asset
+@asset(group_name="git")
 def git_push():
     os.system('git add .')
     os.system('git commit -m "auto commit"')
     os.system('git push')
 
 
-@asset
+@asset(group_name="discover network")
 def get_local_ip():
     # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -53,7 +53,8 @@ def get_local_ip():
         config.write(configfile)
 
 
-@asset(deps=[get_local_ip])
+@asset(deps=[get_local_ip],
+       group_name="discover network")
 def get_list_of_host_with_open_mssql_port():
     # https://www.tutorialspoint.com/python_penetration_testing/python_penetration_testing_network_scanner.htm
 
@@ -77,7 +78,8 @@ def get_list_of_host_with_open_mssql_port():
         config.write(configfile)
 
 
-@asset(deps=[get_list_of_host_with_open_mssql_port])
+@asset(deps=[get_list_of_host_with_open_mssql_port],
+       group_name="discover network")
 def get_correct_db():
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
 
@@ -105,7 +107,8 @@ def get_correct_db():
         config.write(configfile)
 
 
-@asset(deps=[get_correct_db])
+@asset(deps=[get_correct_db],
+       group_name="discover network")
 def create_starke_schema(duckdb: DuckDBResource) -> None:
     create_schema_query = """
                             CREATE SCHEMA IF NOT EXISTS starke
