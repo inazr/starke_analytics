@@ -21,6 +21,10 @@ config = configparser.ConfigParser()
 config.read(CONFIG_FILE_PATH)
 
 
+@asset
+def git_pull():
+    os.system('git pull')
+
 
 @asset
 def get_local_ip():
