@@ -33,7 +33,7 @@ def git_push():
     os.system('git push')
 
 
-@asset(group_name="discover network")
+@asset(group_name="discover_network")
 def get_local_ip():
     # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
