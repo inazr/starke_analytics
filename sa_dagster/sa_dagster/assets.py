@@ -120,7 +120,7 @@ def create_starke_schema(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_starke_schema],
-       group_name="extract & load")
+       group_name="extract_load")
 def extract_load_termin(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -167,7 +167,7 @@ def extract_load_termin(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_starke_schema],
-       group_name="extract & load")
+       group_name="extract_load")
 def extract_load_mitarbeiter(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -229,7 +229,7 @@ def extract_load_mitarbeiter(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_starke_schema],
-       group_name="extract & load")
+       group_name="extract_load")
 def extract_load_rezept(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
