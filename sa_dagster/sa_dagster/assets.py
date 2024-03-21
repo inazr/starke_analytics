@@ -119,7 +119,8 @@ def create_starke_schema(duckdb: DuckDBResource) -> None:
         conn.execute(create_schema_query)
 
 
-@asset(deps=[create_starke_schema])
+@asset(deps=[create_starke_schema],
+       group_name="extract & load")
 def extract_load_termin(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -165,7 +166,8 @@ def extract_load_termin(duckdb: DuckDBResource) -> None:
         conn.execute("CREATE TABLE IF NOT EXISTS starke.raw_termine AS SELECT * FROM df_result;")
 
 
-@asset(deps=[create_starke_schema])
+@asset(deps=[create_starke_schema],
+       group_name="extract & load")
 def extract_load_mitarbeiter(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -226,7 +228,8 @@ def extract_load_mitarbeiter(duckdb: DuckDBResource) -> None:
         conn.execute("CREATE TABLE IF NOT EXISTS starke.raw_mitarbeiter AS SELECT * FROM df_result;")
 
 
-@asset(deps=[create_starke_schema])
+@asset(deps=[create_starke_schema],
+       group_name="extract & load")
 def extract_load_rezept(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
