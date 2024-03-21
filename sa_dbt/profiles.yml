@@ -1,0 +1,6 @@
+default:
+  target: prod
+  outputs:
+    prod:
+      type: duckdb
+      path: ../duckdb/starke_praxis.duckdb
