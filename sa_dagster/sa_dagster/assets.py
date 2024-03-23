@@ -23,6 +23,7 @@ config.read(CONFIG_FILE_PATH)
 
 @asset(group_name="git")
 def git_pull():
+    os.system('git config --global --add safe.directory /home/ubuntu/starke_analytics')
     os.system('git pull')
 
 
