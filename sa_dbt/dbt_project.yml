@@ -22,5 +22,5 @@ models:
     core:
     intermediate:
     source:
-      starke_praxis:
     staging:
+      starke_praxis:

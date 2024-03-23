@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: starke_praxis
+    description: An extract of the starke_praxis database
+    schema: raw_starke
+    database: starke_praxis
+    tables:
+      - name: raw_termine
+      - name: raw_mitarbeiter
+      - name: raw_rezept
