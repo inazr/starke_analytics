@@ -111,7 +111,7 @@ def get_correct_db():
        group_name="discover_network")
 def create_starke_schema(duckdb: DuckDBResource) -> None:
     create_schema_query = """
-                            CREATE SCHEMA IF NOT EXISTS starke
+                            CREATE SCHEMA IF NOT EXISTS raw_starke
                             ;
                           """
 
@@ -162,8 +162,8 @@ def extract_load_termin(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute("DROP TABLE IF EXISTS starke.raw_termine;")
-        conn.execute("CREATE TABLE IF NOT EXISTS starke.raw_termine AS SELECT * FROM df_result;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_termine;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_termine AS SELECT * FROM df_result;")
 
 
 @asset(deps=[create_starke_schema],
@@ -224,8 +224,8 @@ def extract_load_mitarbeiter(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute("DROP TABLE IF EXISTS starke.raw_mitarbeiter;")
-        conn.execute("CREATE TABLE IF NOT EXISTS starke.raw_mitarbeiter AS SELECT * FROM df_result;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_mitarbeiter;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_mitarbeiter AS SELECT * FROM df_result;")
 
 
 @asset(deps=[create_starke_schema],
@@ -368,7 +368,7 @@ def extract_load_rezept(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute("DROP TABLE IF EXISTS starke.raw_rezept;")
-        conn.execute("CREATE TABLE IF NOT EXISTS starke.raw_rezept AS SELECT * FROM df_result;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rezept;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rezept AS SELECT * FROM df_result;")
 
     conn.close()
