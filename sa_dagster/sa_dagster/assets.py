@@ -33,6 +33,12 @@ def git_push():
     os.system('git push')
 
 
+@asset(deps=[git_pull],
+       group_name="meta")
+def install_requirements():
+    os.system('pip install -r requirements.txt')
+
+
 @asset(group_name="discover_network")
 def get_local_ip():
     # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
