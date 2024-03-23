@@ -370,3 +370,5 @@ def extract_load_rezept(duckdb: DuckDBResource) -> None:
     with duckdb.get_connection() as conn:
         conn.execute("DROP TABLE IF EXISTS starke.raw_rezept;")
         conn.execute("CREATE TABLE IF NOT EXISTS starke.raw_rezept AS SELECT * FROM df_result;")
+
+    conn.close()
