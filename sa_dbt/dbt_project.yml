@@ -3,7 +3,7 @@ name: 'sa_dbt'
 version: '1.0.0'
 config-version: 2
 
-profile: 'prod'
+profile: 'starke_analytics'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -20,7 +20,11 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   sa_dbt:
     core:
+      +schema: core
+
     intermediate:
-    source:
+      +schema: intermediate
+
     staging:
       starke_praxis:
+        +schema: stg_starke

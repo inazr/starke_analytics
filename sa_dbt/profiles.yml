@@ -1,6 +1,11 @@
-default:
-  target: prod
+starke_analytics:
+  target: dev
   outputs:
+    dev:
+      type: duckdb
+      path: ../duckdb/starke_praxis.duckdb
+      schema: dbt_dev
     prod:
       type: duckdb
       path: ../duckdb/starke_praxis.duckdb
+      schema: dbt_prod # This will switch the schema structure provided in the dbt_project.yml file
