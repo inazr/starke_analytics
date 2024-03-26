@@ -149,7 +149,7 @@ def extract_load_termin(duckdb: DuckDBResource) -> None:
                         TERMIN.Ausgefallen,
                         TERMIN.Multi,
                         TERMIN.Begruendung,
-                        HASHBYTES('SHA2_256', TERMIN.Text) AS Text, -- possible personal data in text
+                        CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', TERMIN.Text), 2) AS Text, -- possible personal data in text
                         TERMIN.ChangeDate,
                         TERMIN.ChangeTime,
                         TERMIN.BereitsErhalten,
@@ -290,9 +290,9 @@ def extract_load_rezept(duckdb: DuckDBResource) -> None:
                         REZEPT.Genehmigungsdatum,
                         REZEPT.Ausland,
                         REZEPT.EWRCH,
-                        HASHBYTES('SHA2_256', REZEPT.PAT_Name) AS PAT_Name, -- possible personal data in text
-                        HASHBYTES('SHA2_256', CAST(REZEPT.PAT_Geburtsdatum AS VARCHAR(6))) AS PAT_Geburtsdatum, -- possible personal data in text
-                        HASHBYTES('SHA2_256', REZEPT.PAT_Versichertennummer) AS PAT_Versichertennummer, -- possible personal data in text
+                        CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', REZEPT.PAT_Name), 2) AS PAT_Name, -- possible personal data in text
+                        CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', CAST(REZEPT.PAT_Geburtsdatum AS VARCHAR(6))), 2) AS PAT_Geburtsdatum, -- possible personal data in text
+                        CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', REZEPT.PAT_Versichertennummer), 2) AS PAT_Versichertennummer, -- possible personal data in text
                         REZEPT.PAT_VKGueltigkeit,
                         REZEPT.PAT_VKZ,
                         REZEPT.PAT_Status,
@@ -321,7 +321,7 @@ def extract_load_rezept(duckdb: DuckDBResource) -> None:
                         REZEPT.BET_Nummer,
                         REZEPT.ARZ_LANR,
                         REZEPT.ARZ_Nummer,
-                        HASHBYTES('SHA2_256', REZEPT.ARZ_Name) AS ARZ_Name, -- possible personal data in text
+                        CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', REZEPT.ARZ_Name), 2) AS ARZ_Name, -- possible personal data in text
                         REZEPT.Zahlungsart,
                         REZEPT.Erster,
                         REZEPT.Letzter,
@@ -376,5 +376,165 @@ def extract_load_rezept(duckdb: DuckDBResource) -> None:
     with duckdb.get_connection() as conn:
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rezept;")
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rezept AS SELECT * FROM df_result;")
+
+    conn.close()
+
+@asset(deps=[create_starke_schema],
+       group_name="extract_load")
+def extract_load_rechnung(duckdb: DuckDBResource) -> None:
+    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
+    starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
+
+    engine = sqlalchemy.create_engine(
+        'mssql+pyodbc://' + STARKE_PRAXIS_USER + ':' + STARKE_PRAXIS_PASSWORD + '@' + starke_mssql_server + '/' + starke_praxis_db + '?driver=ODBC+Driver+18+for+SQL+Server',
+        connect_args={"TrustServerCertificate": "yes"})
+
+    con = engine.connect()
+
+    query = """
+                SELECT
+                        RECHNUNG.Nr,
+                        RECHNUNG.Nachberechnung,
+                        RECHNUNG.Nummer,
+                        RECHNUNG.Art,
+                        RECHNUNG.Datum,
+                        RECHNUNG.Von,
+                        RECHNUNG.Bis,
+                        RECHNUNG.EMP_Nr,
+                        RECHNUNG.KAS_IK,
+                        CASE WHEN RECHNUNG.KAS_IK = '' THEN CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', RECHNUNG.Name), 2) ELSE RECHNUNG.Name END AS Name,
+                        RECHNUNG.REZ_Nr,
+                        RECHNUNG.SEN_Nr,
+                        RECHNUNG.Zustand,
+                        RECHNUNG.Betrag,
+                        RECHNUNG.Gesamt_0,
+                        RECHNUNG.Gesamt_1,
+                        RECHNUNG.Gesamt_2,
+                        RECHNUNG.Gesamt_3,
+                        RECHNUNG.Mitglied_0,
+                        RECHNUNG.Mitglied_1,
+                        RECHNUNG.Mitglied_2,
+                        RECHNUNG.Mitglied_3,
+                        RECHNUNG.Familie_0,
+                        RECHNUNG.Familie_1,
+                        RECHNUNG.Familie_2,
+                        RECHNUNG.Familie_3,
+                        RECHNUNG.Rentner_0,
+                        RECHNUNG.Rentner_1,
+                        RECHNUNG.Rentner_2,
+                        RECHNUNG.Rentner_3,
+                        RECHNUNG.Sonstige_0,
+                        RECHNUNG.Sonstige_1,
+                        RECHNUNG.Sonstige_2,
+                        RECHNUNG.Sonstige_3,
+                        RECHNUNG.Ausland_0,
+                        RECHNUNG.Ausland_1,
+                        RECHNUNG.Ausland_2,
+                        RECHNUNG.Ausland_3,
+                        RECHNUNG.MwSt,
+                        RECHNUNG.Rezepte,
+                        RECHNUNG.Faelligkeitsdatum,
+                        RECHNUNG.Mahndatum_0,
+                        RECHNUNG.Mahndatum_1,
+                        RECHNUNG.Mahndatum_2,
+                        RECHNUNG.Mahndatum_3,
+                        RECHNUNG.Eingangsdatum,
+                        RECHNUNG.Teilzahlung,
+                        RECHNUNG.ChangeDate,
+                        RECHNUNG.ChangeTime,
+                        RECHNUNG.Id,
+                        RECHNUNG.Prefix,
+                        RECHNUNG.StornoNummer,
+                        RECHNUNG.REC_Nummer,
+                        RECHNUNG.Abschreibung,
+                        RECHNUNG.Abschreibungsdatum,
+                        RECHNUNG.Versendet,
+                        RECHNUNG.Kuerzung,
+                        RECHNUNG.Land,
+                        RECHNUNG.PLZ,
+                        RECHNUNG.Ort,
+                        RECHNUNG.Debitor,
+                        RECHNUNG.Verarbeitungskennzeichen
+                FROM
+                        dbo.RECHNUNG
+                
+                WHERE   1=1
+                ;      
+            """
+
+    result = con.execute(sqlalchemy.text(query))
+
+    df_result = pd.DataFrame(result.fetchall())
+
+    with duckdb.get_connection() as conn:
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rechnung;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rechnung AS SELECT * FROM df_result;")
+
+    conn.close()
+
+
+@asset(deps=[create_starke_schema],
+       group_name="extract_load")
+def extract_load_rechnzeile(duckdb: DuckDBResource) -> None:
+    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
+    starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
+
+    engine = sqlalchemy.create_engine(
+        'mssql+pyodbc://' + STARKE_PRAXIS_USER + ':' + STARKE_PRAXIS_PASSWORD + '@' + starke_mssql_server + '/' + starke_praxis_db + '?driver=ODBC+Driver+18+for+SQL+Server',
+        connect_args={"TrustServerCertificate": "yes"})
+
+    con = engine.connect()
+
+    query = """
+                SELECT
+                        RECHNZEILE.Nr,
+                        RECHNZEILE.RZE_Nr,
+                        RECHNZEILE.Euro,
+                        CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', RECHNZEILE.PAT_Name), 2) AS PAT_Name,
+                        CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', CAST(RECHNZEILE.PAT_Geburtsdatum AS VARCHAR(6))), 2) AS PAT_Geburtsdatum,
+                        RECHNZEILE.PAT_Status,
+                        RECHNZEILE.REZ_Nr,
+                        RECHNZEILE.LEI_Nummer,
+                        RECHNZEILE.LTA_Nummer,
+                        RECHNZEILE.Von,
+                        RECHNZEILE.Bis,
+                        RECHNZEILE.Faktor,
+                        RECHNZEILE.Anzahl,
+                        RECHNZEILE.Brutto,
+                        RECHNZEILE.Zuzahlung,
+                        RECHNZEILE.Netto,
+                        RECHNZEILE.Eigenanteil,
+                        RECHNZEILE.Text,
+                        RECHNZEILE.REC_Nummer,
+                        RECHNZEILE.Abrechnungscode,
+                        RECHNZEILE.REZ_Datum,
+                        RECHNZEILE.KAS_IK,
+                        RECHNZEILE.KAS_Name,
+                        RECHNZEILE.TAR_Name,
+                        RECHNZEILE.DIA_Diagnose,
+                        RECHNZEILE.PAT_Versichertennummer,
+                        RECHNZEILE.PAT_VKZ,
+                        RECHNZEILE.Arbeitsunfall,
+                        RECHNZEILE.Unfalltag,
+                        RECHNZEILE.Unfallbetrieb,
+                        RECHNZEILE.Pauschale,
+                        RECHNZEILE.ZuzPflichtig,
+                        RECHNZEILE.Einzelpreis,
+                        RECHNZEILE.MwSt,
+                        RECHNZEILE.MwStSatz
+                FROM
+                        dbo.RECHNZEILE
+
+                WHERE   1=1
+                ;      
+            """
+
+    result = con.execute(sqlalchemy.text(query))
+
+    df_result = pd.DataFrame(result.fetchall())
+
+    with duckdb.get_connection() as conn:
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rechnzeile;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rechnzeile AS SELECT * FROM df_result;")
 
     conn.close()
