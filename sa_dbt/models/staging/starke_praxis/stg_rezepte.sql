@@ -1,6 +1,6 @@
 SELECT
         raw_rezept.Nr AS rezept_id,
-        raw_rezept.REC_Nummer AS rechnungs_id,
+        raw_rezept.REC_Nummer AS invoice_number,
         raw_rezept.Euro::BOOLEAN AS is_euro,
         raw_rezept.Art AS rezept_type, -- GKV vs. PKV
         DATE '1801-01-01' + to_days(raw_rezept.Datum::INT) AS rezept_date,

@@ -9,3 +9,4 @@ sources:
       - name: raw_termine
       - name: raw_mitarbeiter
       - name: raw_rezept
+      - name: raw_rechnung
