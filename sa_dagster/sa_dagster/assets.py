@@ -121,8 +121,14 @@ def create_starke_schema(duckdb: DuckDBResource) -> None:
                             ;
                           """
 
+    set_pandas_analyze_sample = """
+                                SET GLOBAL pandas_analyze_sample=10000
+                                ;
+                               """
+
     with duckdb.get_connection() as conn:
         conn.execute(create_schema_query)
+        conn.execute(set_pandas_analyze_sample)
 
 
 @asset(deps=[create_starke_schema],
@@ -161,7 +167,6 @@ def extract_load_termin(duckdb: DuckDBResource) -> None:
                 WHERE   1=1
                 ;      
             """
-
 
     result = con.execute(sqlalchemy.text(query))
 
@@ -377,7 +382,6 @@ def extract_load_rezept(duckdb: DuckDBResource) -> None:
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rezept;")
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rezept AS SELECT * FROM df_result;")
 
-    conn.close()
 
 @asset(deps=[create_starke_schema],
        group_name="extract_load")
@@ -463,14 +467,13 @@ def extract_load_rechnung(duckdb: DuckDBResource) -> None:
             """
 
     result = con.execute(sqlalchemy.text(query))
-
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rechnung;")
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rechnung AS SELECT * FROM df_result;")
 
-    conn.close()
+
 
 
 @asset(deps=[create_starke_schema],
@@ -530,11 +533,8 @@ def extract_load_rechnzeile(duckdb: DuckDBResource) -> None:
             """
 
     result = con.execute(sqlalchemy.text(query))
-
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rechnzeile;")
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rechnzeile AS SELECT * FROM df_result;")
-
-    conn.close()
