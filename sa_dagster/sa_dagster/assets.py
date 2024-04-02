@@ -121,14 +121,8 @@ def create_starke_schema(duckdb: DuckDBResource) -> None:
                             ;
                           """
 
-    set_pandas_analyze_sample = """
-                                SET GLOBAL pandas_analyze_sample=10000
-                                ;
-                               """
-
     with duckdb.get_connection() as conn:
         conn.execute(create_schema_query)
-        conn.execute(set_pandas_analyze_sample)
 
 
 @asset(deps=[create_starke_schema],
@@ -466,11 +460,17 @@ def extract_load_rechnung(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
+    set_pandas_analyze_sample = """
+                                SET GLOBAL pandas_analyze_sample=10000
+                                ;
+                               """
+
     result = con.execute(sqlalchemy.text(query))
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rechnung;")
+        conn.execute(set_pandas_analyze_sample)
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rechnung AS SELECT * FROM df_result;")
 
 
@@ -494,7 +494,7 @@ def extract_load_rechnzeile(duckdb: DuckDBResource) -> None:
                         RECHNZEILE.RZE_Nr,
                         RECHNZEILE.Euro,
                         CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', RECHNZEILE.PAT_Name), 2) AS PAT_Name,
-                        CONVERT(VARCHAR(32), HASHBYTES('SHA2_512', CAST(RECHNZEILE.PAT_Geburtsdatum AS VARCHAR(6))), 2) AS PAT_Geburtsdatum,
+                        YEAR(DATEADD(DAY, RECHNZEILE.PAT_Geburtsdatum, '1801-01-01')) AS PAT_Geburtsjahr,
                         RECHNZEILE.PAT_Status,
                         RECHNZEILE.REZ_Nr,
                         RECHNZEILE.LEI_Nummer,
@@ -515,7 +515,7 @@ def extract_load_rechnzeile(duckdb: DuckDBResource) -> None:
                         RECHNZEILE.KAS_Name,
                         RECHNZEILE.TAR_Name,
                         RECHNZEILE.DIA_Diagnose,
-                        RECHNZEILE.PAT_Versichertennummer,
+                        --RECHNZEILE.PAT_Versichertennummer, -- possible personal data
                         RECHNZEILE.PAT_VKZ,
                         RECHNZEILE.Arbeitsunfall,
                         RECHNZEILE.Unfalltag,
@@ -532,9 +532,15 @@ def extract_load_rechnzeile(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
+    set_pandas_analyze_sample = """
+                                SET GLOBAL pandas_analyze_sample=10000
+                                ;
+                               """
+
     result = con.execute(sqlalchemy.text(query))
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rechnzeile;")
+        conn.execute(set_pandas_analyze_sample)
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rechnzeile AS SELECT * FROM df_result;")

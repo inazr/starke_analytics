@@ -10,3 +10,4 @@ sources:
       - name: raw_mitarbeiter
       - name: raw_rezept
       - name: raw_rechnung
+      - name: raw_rechnzeile
