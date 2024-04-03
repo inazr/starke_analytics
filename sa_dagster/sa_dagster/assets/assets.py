@@ -127,7 +127,7 @@ def create_starke_schema(duckdb: DuckDBResource) -> None:
 
 @asset(deps=[create_starke_schema],
        group_name="extract_load")
-def extract_load_termin(duckdb: DuckDBResource) -> None:
+def raw_termine(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
 
@@ -173,7 +173,7 @@ def extract_load_termin(duckdb: DuckDBResource) -> None:
 
 @asset(deps=[create_starke_schema],
        group_name="extract_load")
-def extract_load_mitarbeiter(duckdb: DuckDBResource) -> None:
+def raw_mitarbeiter(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
 
@@ -235,7 +235,7 @@ def extract_load_mitarbeiter(duckdb: DuckDBResource) -> None:
 
 @asset(deps=[create_starke_schema],
        group_name="extract_load")
-def extract_load_rezept(duckdb: DuckDBResource) -> None:
+def raw_rezept(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
 
@@ -379,7 +379,7 @@ def extract_load_rezept(duckdb: DuckDBResource) -> None:
 
 @asset(deps=[create_starke_schema],
        group_name="extract_load")
-def extract_load_rechnung(duckdb: DuckDBResource) -> None:
+def raw_rechnung(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
 
@@ -478,7 +478,7 @@ def extract_load_rechnung(duckdb: DuckDBResource) -> None:
 
 @asset(deps=[create_starke_schema],
        group_name="extract_load")
-def extract_load_rechnzeile(duckdb: DuckDBResource) -> None:
+def raw_rechnzeile(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
 

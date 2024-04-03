@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: stg_mitarbeiter
+    config:
+      meta:
+        dagster:
+          group: staging
+
+  - name: stg_termine
+    config:
+      meta:
+        dagster:
+          group: staging
+
+  - name: stg_rezepte
+    config:
+      meta:
+        dagster:
+          group: staging
+
+  - name: stg_rechnungen
+    config:
+      meta:
+        dagster:
+          group: staging
+
+  - name: stg_rechnzeile
+    config:
+      meta:
+        dagster:
+          group: staging
