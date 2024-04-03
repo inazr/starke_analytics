@@ -1,10 +1,10 @@
 SELECT
-        raw_rechnung.Id AS rechnungs_id,
+        raw_rechnung.Id AS invoice_id,
         raw_rechnung.Nummer AS invoice_number,
         NULLIF(raw_rechnung.StornoNummer, '') AS cancellation_invoice_number,
         raw_rechnung.Nachberechnung::BOOLEAN AS subsequent_billing,
-        raw_rechnung.REZ_Nr AS rezept_id,
-        raw_rechnung.SEN_Nr AS sendungs_id,
+        raw_rechnung.REZ_Nr AS receipt_id,
+        raw_rechnung.SEN_Nr AS delivery_id,
         DATE '1801-01-01' + to_days(raw_rechnung.Datum::INT) AS invoice_date,
         DATE '1801-01-01' + to_days(raw_rechnung.Von::INT) AS invoice_valid_from,
         DATE '1801-01-01' + to_days(raw_rechnung.Bis::INT) AS invoice_valid_to,

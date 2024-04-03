@@ -1,5 +1,5 @@
 SELECT
-        raw_mitarbeiter.Nr AS mitarbeiter_id,
+        raw_mitarbeiter.Nr AS employee_id,
         raw_mitarbeiter.Kurzname AS employee_short,
         raw_mitarbeiter.Name AS employee_name,
         raw_mitarbeiter.Nachname AS employee_lastname,
