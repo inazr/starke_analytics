@@ -171,7 +171,7 @@ def raw_termine(duckdb: DuckDBResource) -> None:
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_termine AS SELECT * FROM df_result;")
 
 
-@asset(deps=[create_starke_schema],
+@asset(deps=[create_duckdb_with_schema],
        group_name="extract_load")
 def raw_mitarbeiter(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
@@ -233,7 +233,7 @@ def raw_mitarbeiter(duckdb: DuckDBResource) -> None:
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_mitarbeiter AS SELECT * FROM df_result;")
 
 
-@asset(deps=[create_starke_schema],
+@asset(deps=[create_duckdb_with_schema],
        group_name="extract_load")
 def raw_rezept(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
@@ -377,7 +377,7 @@ def raw_rezept(duckdb: DuckDBResource) -> None:
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rezept AS SELECT * FROM df_result;")
 
 
-@asset(deps=[create_starke_schema],
+@asset(deps=[create_duckdb_with_schema],
        group_name="extract_load")
 def raw_rechnung(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
@@ -476,7 +476,7 @@ def raw_rechnung(duckdb: DuckDBResource) -> None:
 
 
 
-@asset(deps=[create_starke_schema],
+@asset(deps=[create_duckdb_with_schema],
        group_name="extract_load")
 def raw_rechnzeile(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
