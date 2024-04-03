@@ -4,8 +4,14 @@ from dagster_dbt import dbt_assets, DbtCliResource, DagsterDbtTranslator
 import os
 
 from .constants import DBT_DIRECTORY
+from ..resources.dbt import dbt_resource
 
-dbt_manifest_path = os.path.join(DBT_DIRECTORY, "target", "manifest.json")
+dbt_resource.cli(["--quiet", "parse"]).wait()
+# dbt_manifest_path = os.path.join(DBT_DIRECTORY, "target", "manifest.json")
+dbt_manifest_path = (
+    dbt_resource.cli(["--quiet", "parse"]).wait()
+    .target_path.joinpath("manifest.json")
+)
 
 
 class CustomizedDagsterDbtTranslator(DagsterDbtTranslator):

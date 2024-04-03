@@ -17,7 +17,7 @@ config:
   populate_cache: true
 
 starke_analytics:
-  target: dev
+  target: prod
   outputs:
     dev:
       type: duckdb
