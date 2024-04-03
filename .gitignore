@@ -167,3 +167,6 @@ cython_debug/
 
 #config
 config.ini
+
+#startup script
+dagster_dev_startup.sh
