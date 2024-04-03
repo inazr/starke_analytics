@@ -36,7 +36,7 @@ def git_push():
 @asset(deps=[git_pull],
        group_name="meta")
 def install_requirements():
-    os.system('pip install -r requirements.txt')
+    os.system('pip install -r $DAGSTER_HOME/requirements.txt')
 
 
 @asset(group_name="discover_network")
@@ -114,8 +114,8 @@ def get_correct_db():
 
 
 @asset(deps=[get_correct_db],
-       group_name="discover_network")
-def create_starke_schema(duckdb: DuckDBResource) -> None:
+       group_name="preparation")
+def create_duckdb_with_schema(duckdb: DuckDBResource) -> None:
     create_schema_query = """
                             CREATE SCHEMA IF NOT EXISTS raw_starke
                             ;
@@ -125,7 +125,7 @@ def create_starke_schema(duckdb: DuckDBResource) -> None:
         conn.execute(create_schema_query)
 
 
-@asset(deps=[create_starke_schema],
+@asset(deps=[create_duckdb_with_schema],
        group_name="extract_load")
 def raw_termine(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
