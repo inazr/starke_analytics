@@ -1,3 +1,21 @@
+# with dbt 1.8 the config needs to be added to the dbt_project.yml file
+# https://docs.getdbt.com/docs/core/connect-data-platform/profiles.yml
+
+config:
+  send_anonymous_usage_stats: false
+  use_colors: true
+  partial_parse: false
+  printer_width: 100
+  write_json: true
+  warn_error: false
+  log_format: default
+  debug: false
+  version_check: no
+  fail_fast: false
+  use_experimental_parser: false
+  cache_selected_only: false
+  populate_cache: true
+
 starke_analytics:
   target: dev
   outputs:
