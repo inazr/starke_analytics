@@ -1,31 +1,31 @@
 version: 2
 
 models:
-  - name: stg_mitarbeiter
+  - name: stg_employees
     config:
       meta:
         dagster:
           group: staging
 
-  - name: stg_termine
+  - name: stg_appointments
     config:
       meta:
         dagster:
           group: staging
 
-  - name: stg_rezepte
+  - name: stg_receipts
     config:
       meta:
         dagster:
           group: staging
 
-  - name: stg_rechnungen
+  - name: stg_invoices
     config:
       meta:
         dagster:
           group: staging
 
-  - name: stg_rechnzeile
+  - name: stg_invoice_line_items
     config:
       meta:
         dagster:

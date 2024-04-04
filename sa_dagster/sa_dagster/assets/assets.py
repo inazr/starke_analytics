@@ -167,10 +167,10 @@ def raw_termine(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_termine_temp AS SELECT * FROM df_result;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_termine;")
-        conn.execute("ALTER TABLE raw_starke.raw_termine_temp RENAME TO raw_termine;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_termine_temp;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_appointments_temp AS SELECT * FROM df_result;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_appointments;")
+        conn.execute("ALTER TABLE raw_starke.raw_appointments_temp RENAME TO raw_appointments;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_appointments_temp;")
 
 
 @asset(deps=[create_duckdb_with_schema],
@@ -231,8 +231,10 @@ def raw_mitarbeiter(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_mitarbeiter;")
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_mitarbeiter AS SELECT * FROM df_result;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_employees_temp AS SELECT * FROM df_result;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_employees;")
+        conn.execute("ALTER TABLE raw_starke.raw_employees_temp RENAME TO raw_employees;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_employees_temp;")
 
 
 @asset(deps=[create_duckdb_with_schema],
@@ -375,8 +377,10 @@ def raw_rezept(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rezept;")
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rezept AS SELECT * FROM df_result;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_receipts_temp AS SELECT * FROM df_result;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_receipts;")
+        conn.execute("ALTER TABLE raw_starke.raw_receipts_temp RENAME TO raw_receipts;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_receipts_temp;")
 
 
 @asset(deps=[create_duckdb_with_schema],
@@ -471,9 +475,11 @@ def raw_rechnung(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rechnung;")
         conn.execute(set_pandas_analyze_sample)
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rechnung AS SELECT * FROM df_result;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_invoices_temp AS SELECT * FROM df_result;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoices;")
+        conn.execute("ALTER TABLE raw_starke.raw_invoices_temp RENAME TO raw_invoices;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoices_temp;")
 
 
 
@@ -543,6 +549,8 @@ def raw_rechnzeile(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_rechnzeile;")
         conn.execute(set_pandas_analyze_sample)
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_rechnzeile AS SELECT * FROM df_result;")
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_invoice_line_items_temp AS SELECT * FROM df_result;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoice_line_items;")
+        conn.execute("ALTER TABLE raw_starke.raw_invoice_line_items_temp RENAME TO raw_invoice_line_items;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoice_line_items_temp;")
