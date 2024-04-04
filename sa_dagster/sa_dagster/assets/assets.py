@@ -8,14 +8,8 @@ import configparser
 import pandas as pd
 from dagster_duckdb import DuckDBResource
 
-from dotenv import load_dotenv
-load_dotenv()
+from .constants import STARKE_PRAXIS_PORT, STARKE_PRAXIS_USER, STARKE_PRAXIS_PASSWORD, CONFIG_FILE_PATH
 
-STARKE_PRAXIS_PORT = int(os.getenv('STARKE_PRAXIS_PORT'))
-STARKE_PRAXIS_USER = os.getenv('STARKE_PRAXIS_USER')
-STARKE_PRAXIS_PASSWORD = os.getenv('STARKE_PRAXIS_PASSWORD')
-
-CONFIG_FILE_PATH = os.getenv('CONFIG_FILE_PATH')
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE_PATH)
