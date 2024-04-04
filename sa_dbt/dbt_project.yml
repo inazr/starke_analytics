@@ -28,3 +28,4 @@ models:
     staging:
       starke_praxis:
         +schema: stg_starke
+        +tags: stg_starke

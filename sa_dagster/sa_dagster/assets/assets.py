@@ -126,7 +126,7 @@ def create_duckdb_with_schema(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load")
+       group_name="extract_load_starke")
 def raw_appointments(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -174,7 +174,7 @@ def raw_appointments(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load")
+       group_name="extract_load_starke")
 def raw_employees(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -238,7 +238,7 @@ def raw_employees(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load")
+       group_name="extract_load_starke")
 def raw_receipts(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -384,7 +384,7 @@ def raw_receipts(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load")
+       group_name="extract_load_starke")
 def raw_invoices(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -485,7 +485,7 @@ def raw_invoices(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load")
+       group_name="extract_load_starke")
 def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
