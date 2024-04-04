@@ -167,8 +167,10 @@ def raw_termine(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
+        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_termine_temp AS SELECT * FROM df_result;")
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_termine;")
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_termine AS SELECT * FROM df_result;")
+        conn.execute("ALTER TABLE raw_starke.raw_termine_temp RENAME TO raw_termine;")
+        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_termine_temp;")
 
 
 @asset(deps=[create_duckdb_with_schema],
