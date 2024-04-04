@@ -1,0 +1,8 @@
+version: 2
+
+models:
+  - name: fct_receipts_to_appointments
+    config:
+      meta:
+        dagster:
+          group: core
