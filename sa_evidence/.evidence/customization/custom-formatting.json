@@ -1,4 +1,10 @@
 {
   "version": "1.0",
-  "customFormats": []
+  "customFormats": [
+    {
+      "formatTag": "euro2decimal",
+      "formatCode": "#,##0.00 €",
+      "valueType": "number"
+    }
+  ]
 }

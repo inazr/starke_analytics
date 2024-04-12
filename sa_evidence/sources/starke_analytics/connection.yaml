@@ -1,0 +1,5 @@
+# This file was automatically generated
+name: starke_analytics
+type: duckdb
+options:
+  filename: ../../../duckdb/starke_praxis.duckdb

@@ -21,6 +21,7 @@ models:
   sa_dbt:
     core:
       +schema: core
+      +materialized: table
 
     intermediate:
       +schema: intermediate
