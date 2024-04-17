@@ -53,3 +53,30 @@ WHERE   1=1
 GROUP BY
         fct_receipts_to_appointments.appointment_employee_short
 ```
+
+<BarChart 
+    data={appointment_type_share_per_month} 
+    x=appointment_month 
+    y=appointments 
+    series=receipt_type
+    type=stacked100
+/>
+
+```sql appointment_type_share_per_month
+SELECT
+        DATE_TRUNC('MONTH', fct_receipts_to_appointments.appointment_date) AS appointment_month,
+        CASE fct_receipts_to_appointments.receipt_type
+            WHEN 'P' THEN 'PKV'
+            WHEN 'K' THEN 'GKV'
+            WHEN 'Z' THEN 'Sonstige'
+            ELSE 'unknown'
+        END AS receipt_type,
+        COUNT(fct_receipts_to_appointments.appointment_id) AS appointments,
+FROM
+        fct_receipts_to_appointments
+WHERE   1=1
+  AND   NOT fct_receipts_to_appointments.is_cancelled
+
+GROUP BY
+        1,2
+```

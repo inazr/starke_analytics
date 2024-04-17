@@ -39,9 +39,16 @@
 </tr>
 </table>
 
-
-
-
+<BarChart
+  data={number_of_appointments_per_week_this_year}
+  y=number_of_appointments_per_week
+  x=iso_week
+  series=appointment_employee_short
+  yFmt=integer
+  type=grouped
+  title = "# Therapien"
+  subtitle = "pro Mitarbeiterin pro Woche"
+/>
 
 <BarChart
   data={appointments_per_month_per_employee}
@@ -53,6 +60,7 @@
   title = "# Therapien"
   subtitle = "pro Mitarbeiterin pro Monat"
 />
+
 
 
 
@@ -81,4 +89,20 @@ FROM
 WHERE   1=1
   AND   NOT fct_receipts_to_appointments.is_cancelled
   AND   fct_receipts_to_appointments.appointment_date >= (DATE_TRUNC('MONTH', CURRENT_DATE) - INTERVAL '3 MONTH')
+```
+
+```sql number_of_appointments_per_week_this_year
+SELECT
+        fct_receipts_to_appointments.appointment_employee_short,
+        WEEK(fct_receipts_to_appointments.appointment_date) AS iso_week,
+        COUNT(fct_receipts_to_appointments.appointment_id) AS number_of_appointments_per_week
+FROM
+        fct_receipts_to_appointments
+WHERE   1=1
+  AND   NOT fct_receipts_to_appointments.is_cancelled
+  AND   fct_receipts_to_appointments.appointment_date >= DATE_TRUNC('YEAR', CURRENT_DATE)
+  
+GROUP BY 
+        fct_receipts_to_appointments.appointment_employee_short,
+        WEEK(fct_receipts_to_appointments.appointment_date)
 ```
