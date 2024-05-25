@@ -6,3 +6,8 @@ models:
       meta:
         dagster:
           group: core
+  - name: fct_accounting_documents
+    config:
+      meta:
+        dagster:
+          group: core
