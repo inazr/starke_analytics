@@ -1,0 +1,17 @@
+Running with dbt=1.7.10
+Registered adapter: duckdb=1.7.3
+[[33mWARNING[0m]: Configuration paths exist in your dbt_project.yml file which do not apply to any resources.
+There are 1 unused configuration paths:
+- models.sa_dbt.intermediate
+Found 6 models, 5 sources, 0 exposures, 0 metrics, 392 macros, 0 groups, 0 semantic models
+
+Concurrency: 1 threads (target='prod')
+
+1 of 1 START sql table model core.fct_receipts_to_appointments ..................................... [RUN]
+1 of 1 OK created sql table model core.fct_receipts_to_appointments ................................ [[32mOK[0m in 0.11s]
+
+Finished running 1 table model in 0 hours 0 minutes and 0.21 seconds (0.21s).
+
+[32mCompleted successfully[0m
+
+Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1

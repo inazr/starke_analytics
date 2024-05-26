@@ -107,8 +107,21 @@ def get_correct_db():
         config.write(configfile)
 
 
-@asset(deps=[get_correct_db],
-       group_name="preparation")
+@asset(deps=[],
+       group_name="check_server_online_status")
+def check_server_online_status() -> None:
+    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
+
+    response = os.system("ping -n 1 " + starke_mssql_server)
+
+    if response == 0:
+        config.set('NETWORK', 'run_network_discovery', False)
+    else:
+        config.set('NETWORK', 'run_network_discovery', True)
+
+
+@asset(deps=[check_server_online_status, get_correct_db],
+       group_name="extraction_entry_point")
 def create_duckdb_with_schema(duckdb: DuckDBResource) -> None:
     create_schema_query = """
                             CREATE SCHEMA IF NOT EXISTS raw_starke
