@@ -1,2 +1,0 @@
-[32m2024-05-26 13:02:19 +0200[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 870767ab-acc4-4909-86a7-c0912632b6e3 - 2550 - LOGS_CAPTURED - Started capturing logs in process (pid: 2550).
-[32m2024-05-26 13:02:19 +0200[0m - dagster - [34mDEBUG[0m - __ASSET_JOB - 870767ab-acc4-4909-86a7-c0912632b6e3 - 2550 - git_push - STEP_START - Started execution of step "git_push".

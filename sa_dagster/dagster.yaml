@@ -3,3 +3,7 @@
 storage:
   sqlite:
     base_dir: storage/sqlite
+
+# https://docs.dagster.io/about/telemetry
+telemetry:
+  enabled: false

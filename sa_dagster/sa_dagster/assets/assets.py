@@ -1,4 +1,4 @@
-from dagster import asset
+from dagster import asset, DagsterInstance, OpExecutionContext
 
 import socket
 import sqlalchemy
@@ -102,25 +102,39 @@ def get_correct_db():
     result = con.execute(sqlalchemy.text(query))
 
     config.set('STARKE_PRAXIS', 'database', result.fetchall()[0][0])
+    config.set('NETWORK', 'run_network_discovery', 'False')
 
     with open(CONFIG_FILE_PATH, 'w') as configfile:
         config.write(configfile)
 
 
 @asset(deps=[],
-       group_name="check_server_online_status")
-def check_server_online_status() -> None:
+       group_name="extraction_entry_point")
+def check_server_online_status(context: OpExecutionContext) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
 
-    response = os.system("ping -n 1 " + starke_mssql_server)
+    socket.setdefaulttimeout(1)
 
-    if response == 0:
-        config.set('NETWORK', 'run_network_discovery', False)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    result = s.connect_ex((starke_mssql_server, STARKE_PRAXIS_PORT))
+
+    # Initialize the Dagster instance
+    instance = DagsterInstance.get()
+
+    if result == 0:
+        config.set('NETWORK', 'run_network_discovery', 'False')
     else:
-        config.set('NETWORK', 'run_network_discovery', True)
+        config.set('NETWORK', 'run_network_discovery', 'True')
+
+        # Terminate the run
+        termination_result = instance.run_launcher.terminate(context.run.run_id)
+        print(f"Run {context.run.run_id} terminated successfully.")
+
+    with open(CONFIG_FILE_PATH, 'w') as configfile:
+        config.write(configfile)
 
 
-@asset(deps=[check_server_online_status, get_correct_db],
+@asset(deps=[check_server_online_status],
        group_name="extraction_entry_point")
 def create_duckdb_with_schema(duckdb: DuckDBResource) -> None:
     create_schema_query = """
@@ -128,8 +142,11 @@ def create_duckdb_with_schema(duckdb: DuckDBResource) -> None:
                             ;
                           """
 
-    with duckdb.get_connection() as conn:
-        conn.execute(create_schema_query)
+    run_network_discovery = config.get('NETWORK', 'run_network_discovery')
+
+    if run_network_discovery == 'False':
+        with duckdb.get_connection() as conn:
+            conn.execute(create_schema_query)
 
 
 @asset(deps=[create_duckdb_with_schema],
