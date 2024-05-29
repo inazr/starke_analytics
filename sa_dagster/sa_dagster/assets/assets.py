@@ -113,13 +113,10 @@ def get_correct_db():
 def check_server_online_status(context: OpExecutionContext) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
 
+    # 1 second timeout
     socket.setdefaulttimeout(1)
-
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     result = s.connect_ex((starke_mssql_server, STARKE_PRAXIS_PORT))
-
-    # Initialize the Dagster instance
-    instance = DagsterInstance.get()
 
     if result == 0:
         config.set('NETWORK', 'run_network_discovery', 'False')
@@ -127,6 +124,7 @@ def check_server_online_status(context: OpExecutionContext) -> None:
         config.set('NETWORK', 'run_network_discovery', 'True')
 
         # Terminate the run
+        instance = DagsterInstance.get()
         termination_result = instance.run_launcher.terminate(context.run.run_id)
         print(f"Run {context.run.run_id} terminated successfully.")
 
@@ -504,8 +502,6 @@ def raw_invoices(duckdb: DuckDBResource) -> None:
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoices;")
         conn.execute("ALTER TABLE raw_starke.raw_invoices_temp RENAME TO raw_invoices;")
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoices_temp;")
-
-
 
 
 @asset(deps=[create_duckdb_with_schema],
