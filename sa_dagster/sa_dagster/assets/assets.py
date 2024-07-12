@@ -14,6 +14,11 @@ from .constants import STARKE_PRAXIS_PORT, STARKE_PRAXIS_USER, STARKE_PRAXIS_PAS
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE_PATH)
 
+SET_PANDAS_ANALYZE_SAMPLE = """
+                            SET GLOBAL pandas_analyze_sample=10000
+                            ;
+                           """
+
 
 @asset(group_name="git")
 def git_pull():
@@ -189,6 +194,7 @@ def raw_appointments(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
+        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_appointments_temp AS SELECT * FROM df_result;")
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_appointments;")
         conn.execute("ALTER TABLE raw_starke.raw_appointments_temp RENAME TO raw_appointments;")
@@ -253,6 +259,7 @@ def raw_employees(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
+        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_employees_temp AS SELECT * FROM df_result;")
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_employees;")
         conn.execute("ALTER TABLE raw_starke.raw_employees_temp RENAME TO raw_employees;")
@@ -399,6 +406,7 @@ def raw_receipts(duckdb: DuckDBResource) -> None:
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
+        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_receipts_temp AS SELECT * FROM df_result;")
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_receipts;")
         conn.execute("ALTER TABLE raw_starke.raw_receipts_temp RENAME TO raw_receipts;")
@@ -488,16 +496,11 @@ def raw_invoices(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
-    set_pandas_analyze_sample = """
-                                SET GLOBAL pandas_analyze_sample=10000
-                                ;
-                               """
-
     result = con.execute(sqlalchemy.text(query))
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute(set_pandas_analyze_sample)
+        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_invoices_temp AS SELECT * FROM df_result;")
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoices;")
         conn.execute("ALTER TABLE raw_starke.raw_invoices_temp RENAME TO raw_invoices;")
@@ -560,16 +563,12 @@ def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
-    set_pandas_analyze_sample = """
-                                SET GLOBAL pandas_analyze_sample=10000
-                                ;
-                               """
 
     result = con.execute(sqlalchemy.text(query))
     df_result = pd.DataFrame(result.fetchall())
 
     with duckdb.get_connection() as conn:
-        conn.execute(set_pandas_analyze_sample)
+        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
         conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_invoice_line_items_temp AS SELECT * FROM df_result;")
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoice_line_items;")
         conn.execute("ALTER TABLE raw_starke.raw_invoice_line_items_temp RENAME TO raw_invoice_line_items;")
