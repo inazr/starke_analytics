@@ -1,3 +1,4 @@
+import dagster_dbt
 from dagster import asset, DagsterInstance, OpExecutionContext
 
 import socket
@@ -563,7 +564,6 @@ def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
-
     result = con.execute(sqlalchemy.text(query))
     df_result = pd.DataFrame(result.fetchall())
 
@@ -573,3 +573,10 @@ def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoice_line_items;")
         conn.execute("ALTER TABLE raw_starke.raw_invoice_line_items_temp RENAME TO raw_invoice_line_items;")
         conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoice_line_items_temp;")
+
+
+@asset(deps=[dagster_dbt.dbt_manifest_asset_selection.AssetKey("fct_receipts_to_appointments"),
+             dagster_dbt.dbt_manifest_asset_selection.AssetKey("fct_accounting_documents")],
+       group_name="rebuild_evidence_sources")
+def copy_sources_to_evidence() -> None:
+    os.system('cd $DAGSTER_HOME/../sa_evidence && npm run sources')
