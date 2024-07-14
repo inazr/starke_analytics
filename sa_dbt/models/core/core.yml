@@ -6,8 +6,11 @@ models:
       meta:
         dagster:
           group: core
+          asset_key: fct_receipts_to_appointments
+
   - name: fct_accounting_documents
     config:
       meta:
         dagster:
           group: core
+          asset_key: fct_accounting_documents
