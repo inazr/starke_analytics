@@ -576,7 +576,8 @@ def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[dagster_dbt.dbt_manifest_asset_selection.AssetKey("fct_receipts_to_appointments"),
-             dagster_dbt.dbt_manifest_asset_selection.AssetKey("fct_accounting_documents")],
+             dagster_dbt.dbt_manifest_asset_selection.AssetKey("fct_accounting_documents"),
+             dagster_dbt.dbt_manifest_asset_selection.AssetKey("dim_receipts")],
        group_name="rebuild_evidence_sources")
 def copy_sources_to_evidence() -> None:
     os.system('cd $DAGSTER_HOME/../sa_evidence && npm run sources')
