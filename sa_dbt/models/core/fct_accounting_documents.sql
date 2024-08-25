@@ -3,7 +3,7 @@ SELECT
         stg_invoices.invoice_number,
         CASE WHEN stg_invoices.cancellation_invoice_number IS NOT NULL THEN TRUE ELSE FALSE END is_cancellation,
         stg_invoices.cancellation_invoice_number,
-        stg_invoices.receipt_id,
+        --stg_invoices.receipt_id, -- this looks to be incorrect
         stg_invoices.invoice_date,
         stg_invoices.due_date,
         stg_invoices.first_dunning_date,
