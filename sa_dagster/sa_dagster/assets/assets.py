@@ -11,6 +11,10 @@ from dagster_duckdb import DuckDBResource
 
 from .constants import STARKE_PRAXIS_PORT, STARKE_PRAXIS_USER, STARKE_PRAXIS_PASSWORD, CONFIG_FILE_PATH
 
+from dagster_graphql import (
+    DagsterGraphQLClient,
+    ReloadRepositoryLocationInfo
+)
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE_PATH)
@@ -581,3 +585,11 @@ def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
        group_name="rebuild_evidence_sources")
 def copy_sources_to_evidence() -> None:
     os.system('cd $DAGSTER_HOME/../sa_evidence && npm run sources')
+
+
+@asset(group_name="test")
+def reload_repository_sensor() -> None:
+    client = DagsterGraphQLClient("127.0.0.1", port_number=3000)
+    reload_info: ReloadRepositoryLocationInfo = client.reload_repository_location(
+        "sa_dagster"
+    )

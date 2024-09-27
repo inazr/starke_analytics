@@ -14,3 +14,10 @@ models:
         dagster:
           group: core
           asset_key: fct_accounting_documents
+
+  - name: dim_receipts
+    config:
+      meta:
+        dagster:
+          group: core
+          asset_key: dim_receipts
