@@ -1,6 +1,6 @@
 from dagster_dbt import DbtCliResource
-from ..assets.constants import DBT_DIRECTORY
+from ..project import dbt_project
 
 dbt_resource = DbtCliResource(
-    project_dir=DBT_DIRECTORY,
+    project_dir=dbt_project,
 )
