@@ -25,7 +25,7 @@ SET_PANDAS_ANALYZE_SAMPLE = """
                            """
 
 
-@asset(group_name="git")
+@asset(group_name="pre_dbt_run")
 def git_pull():
     os.system('git pull')
 
@@ -38,7 +38,7 @@ def git_push():
 
 
 @asset(deps=[git_pull],
-       group_name="meta")
+       group_name="pre_dbt_run")
 def install_requirements():
     os.system('pip install -r $DAGSTER_HOME/requirements.txt')
 
@@ -158,7 +158,7 @@ def create_duckdb_with_schema(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load_starke")
+       group_name="extract_from_starke")
 def raw_appointments(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -207,7 +207,7 @@ def raw_appointments(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load_starke")
+       group_name="extract_from_starke")
 def raw_employees(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -272,7 +272,7 @@ def raw_employees(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load_starke")
+       group_name="extract_from_starke")
 def raw_receipts(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -419,7 +419,7 @@ def raw_receipts(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load_starke")
+       group_name="extract_from_starke")
 def raw_invoices(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -513,7 +513,7 @@ def raw_invoices(duckdb: DuckDBResource) -> None:
 
 
 @asset(deps=[create_duckdb_with_schema],
-       group_name="extract_load_starke")
+       group_name="extract_from_starke")
 def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
     starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
     starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
@@ -587,9 +587,9 @@ def copy_sources_to_evidence() -> None:
     os.system('cd $DAGSTER_HOME/../sa_evidence && npm run sources')
 
 
-@asset(group_name="test")
-def reload_repository_sensor() -> None:
-    client = DagsterGraphQLClient("127.0.0.1", port_number=3000)
+@asset(deps=[install_requirements], group_name="pre_dbt_run")
+def reload_code_location() -> None:
+    client = DagsterGraphQLClient("127.0.0.1", port_number=2999)
     reload_info: ReloadRepositoryLocationInfo = client.reload_repository_location(
         "sa_dagster"
     )

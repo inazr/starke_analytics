@@ -7,7 +7,22 @@ sources:
     database: starke_praxis
     tables:
       - name: raw_appointments
+        meta:
+          dagster:
+            asset_key: [ "raw_appointments" ]
       - name: raw_employees
+        meta:
+          dagster:
+            asset_key: [ "raw_employees" ]
       - name: raw_receipts
+        meta:
+          dagster:
+            asset_key: [ "raw_receipts" ]
       - name: raw_invoices
+        meta:
+          dagster:
+            asset_key: [ "raw_invoices" ]
       - name: raw_invoice_line_items
+        meta:
+          dagster:
+            asset_key: [ "raw_invoice_line_items" ]
