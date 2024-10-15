@@ -2,30 +2,55 @@ version: 2
 
 models:
   - name: stg_employees
+    columns:
+      - name: employee_id
+        tests:
+          - unique
+          - not_null
     config:
       meta:
         dagster:
           group: staging
 
   - name: stg_appointments
+    columns:
+      - name: appointment_id
+        tests:
+          - unique
+          - not_null
     config:
       meta:
         dagster:
           group: staging
 
   - name: stg_receipts
+    columns:
+      - name: receipt_id
+        tests:
+          - unique
+          - not_null
     config:
       meta:
         dagster:
           group: staging
 
   - name: stg_invoices
+    columns:
+      - name: invoice_id
+        tests:
+          - unique
+          - not_null
     config:
       meta:
         dagster:
           group: staging
 
   - name: stg_invoice_line_items
+    columns:
+      - name: invoice_line_item_id
+        tests:
+          - unique
+          - not_null
     config:
       meta:
         dagster:

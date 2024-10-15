@@ -588,6 +588,12 @@ def copy_sources_to_evidence() -> None:
 
 
 @asset(deps=[install_requirements], group_name="pre_dbt_run")
+def parse_dbt() -> None:
+    os.system('cd $DAGSTER_HOME/../sa_dbt && dbt parse')
+    print("Parsing")
+
+
+@asset(deps=[parse_dbt], group_name="pre_dbt_run")
 def reload_code_location() -> None:
     client = DagsterGraphQLClient("127.0.0.1", port_number=2999)
     reload_info: ReloadRepositoryLocationInfo = client.reload_repository_location(
