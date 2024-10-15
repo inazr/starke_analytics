@@ -40,6 +40,13 @@ models:
         data_tests:
           - unique
           - not_null
+      - name: receipt_id
+        data_tests:
+          - unique:
+              config:
+                severity: warn
+                error_if: ">1000"
+                warn_if: ">0"
     config:
       meta:
         dagster:
