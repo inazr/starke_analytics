@@ -1,8 +1,5 @@
-
 # https://docs.dagster.io/deployment/dagster-instance
-storage:
-  sqlite:
-    base_dir: storage/sqlite
+# No storage block: Dagster stores runs in $DAGSTER_HOME/storage (= sa_dagster/storage) by default.
 
 # https://docs.dagster.io/about/telemetry
 telemetry:

@@ -16,15 +16,16 @@ clean-targets:         # directories to be removed by `dbt clean`
   - "target"
   - "dbt_packages"
 
+flags:
+  send_anonymous_usage_stats: false
+  partial_parse: false
+  version_check: false
 
 models:
   sa_dbt:
     core:
       +schema: core
       +materialized: table
-
-    intermediate:
-      +schema: intermediate
 
     staging:
       starke_praxis:

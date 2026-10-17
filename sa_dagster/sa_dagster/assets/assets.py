@@ -1,4 +1,3 @@
-import dagster_dbt
 from dagster import asset, DagsterInstance, OpExecutionContext
 
 import socket
@@ -25,22 +24,40 @@ SET_PANDAS_ANALYZE_SAMPLE = """
                            """
 
 
+def save_config() -> None:
+    with open(CONFIG_FILE_PATH, 'w') as configfile:
+        config.write(configfile)
+
+
+def get_mssql_engine(database: str) -> sqlalchemy.Engine:
+    server = config.get('NETWORK', 'last_known_starke_mssql_server')
+    url = (f'mssql+pyodbc://{STARKE_PRAXIS_USER}:{STARKE_PRAXIS_PASSWORD}@{server}/{database}'
+           '?driver=ODBC+Driver+18+for+SQL+Server')
+    return sqlalchemy.create_engine(url, connect_args={"TrustServerCertificate": "yes"})
+
+
+def load_starke_table(duckdb: DuckDBResource, table_name: str, query: str) -> None:
+    """Copy the result of a Starke MSSQL query into raw_starke.<table_name> (full replace)."""
+    engine = get_mssql_engine(config.get('STARKE_PRAXIS', 'database'))
+    with engine.connect() as con:
+        df_result = pd.DataFrame(con.execute(sqlalchemy.text(query)).fetchall())
+
+    with duckdb.get_connection() as conn:
+        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
+        conn.register("df_result", df_result)
+        # CREATE OR REPLACE is atomic: the old table stays until the new one is ready
+        conn.execute(f"CREATE OR REPLACE TABLE raw_starke.{table_name} AS SELECT * FROM df_result;")
+
+
 @asset(group_name="pre_dbt_run")
 def git_pull():
     os.system('git pull')
 
 
-@asset(group_name="git")
-def git_push():
-    os.system('git add .')
-    os.system('git commit -m "auto commit"')
-    os.system('git push')
-
-
 @asset(deps=[git_pull],
        group_name="pre_dbt_run")
 def install_requirements():
-    os.system('pip install -r $DAGSTER_HOME/requirements.txt')
+    os.system('cd $DAGSTER_HOME/.. && uv sync')
 
 
 @asset(group_name="discover_network")
@@ -59,8 +76,7 @@ def get_local_ip():
 
     config.set('NETWORK', 'local_ip', local_ip)
 
-    with open(CONFIG_FILE_PATH, 'w') as configfile:
-        config.write(configfile)
+    save_config()
 
 
 @asset(deps=[get_local_ip],
@@ -84,18 +100,13 @@ def get_list_of_host_with_open_mssql_port():
 
     config.set('NETWORK', 'last_known_starke_mssql_server', ip)
 
-    with open(CONFIG_FILE_PATH, 'w') as configfile:
-        config.write(configfile)
+    save_config()
 
 
 @asset(deps=[get_list_of_host_with_open_mssql_port],
        group_name="discover_network")
 def get_correct_db():
-    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
-
-    engine = sqlalchemy.create_engine(
-        'mssql+pyodbc://' + STARKE_PRAXIS_USER + ':' + STARKE_PRAXIS_PASSWORD + '@' + starke_mssql_server + '/master?driver=ODBC+Driver+18+for+SQL+Server',
-        connect_args={"TrustServerCertificate": "yes"})
+    engine = get_mssql_engine('master')
 
     query = """
                 SELECT 
@@ -107,15 +118,12 @@ def get_correct_db():
                   ;      
             """
 
-    con = engine.connect()
-    
-    result = con.execute(sqlalchemy.text(query))
-
-    config.set('STARKE_PRAXIS', 'database', result.fetchall()[0][0])
+    with engine.connect() as con:
+        result = con.execute(sqlalchemy.text(query))
+        config.set('STARKE_PRAXIS', 'database', result.fetchall()[0][0])
     config.set('NETWORK', 'run_network_discovery', 'False')
 
-    with open(CONFIG_FILE_PATH, 'w') as configfile:
-        config.write(configfile)
+    save_config()
 
 
 @asset(deps=[],
@@ -138,8 +146,7 @@ def check_server_online_status(context: OpExecutionContext) -> None:
         termination_result = instance.run_launcher.terminate(context.run.run_id)
         print(f"Run {context.run.run_id} terminated successfully.")
 
-    with open(CONFIG_FILE_PATH, 'w') as configfile:
-        config.write(configfile)
+    save_config()
 
 
 @asset(deps=[check_server_online_status],
@@ -160,15 +167,6 @@ def create_duckdb_with_schema(duckdb: DuckDBResource) -> None:
 @asset(deps=[create_duckdb_with_schema],
        group_name="extract_from_starke")
 def raw_appointments(duckdb: DuckDBResource) -> None:
-    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
-    starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
-
-    engine = sqlalchemy.create_engine(
-        'mssql+pyodbc://' + STARKE_PRAXIS_USER + ':' + STARKE_PRAXIS_PASSWORD + '@' + starke_mssql_server + '/' + starke_praxis_db + '?driver=ODBC+Driver+18+for+SQL+Server',
-        connect_args={"TrustServerCertificate": "yes"})
-
-    con = engine.connect()
-
     query = """
                 SELECT 
                         TERMIN.Nr,
@@ -194,30 +192,12 @@ def raw_appointments(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
-    result = con.execute(sqlalchemy.text(query))
-
-    df_result = pd.DataFrame(result.fetchall())
-
-    with duckdb.get_connection() as conn:
-        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_appointments_temp AS SELECT * FROM df_result;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_appointments;")
-        conn.execute("ALTER TABLE raw_starke.raw_appointments_temp RENAME TO raw_appointments;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_appointments_temp;")
+    load_starke_table(duckdb, "raw_appointments", query)
 
 
 @asset(deps=[create_duckdb_with_schema],
        group_name="extract_from_starke")
 def raw_employees(duckdb: DuckDBResource) -> None:
-    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
-    starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
-
-    engine = sqlalchemy.create_engine(
-        'mssql+pyodbc://' + STARKE_PRAXIS_USER + ':' + STARKE_PRAXIS_PASSWORD + '@' + starke_mssql_server + '/' + starke_praxis_db + '?driver=ODBC+Driver+18+for+SQL+Server',
-        connect_args={"TrustServerCertificate": "yes"})
-
-    con = engine.connect()
-
     query = """
                 SELECT 
                         MITARBEITER.Nr,
@@ -259,30 +239,12 @@ def raw_employees(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
-    result = con.execute(sqlalchemy.text(query))
-
-    df_result = pd.DataFrame(result.fetchall())
-
-    with duckdb.get_connection() as conn:
-        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_employees_temp AS SELECT * FROM df_result;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_employees;")
-        conn.execute("ALTER TABLE raw_starke.raw_employees_temp RENAME TO raw_employees;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_employees_temp;")
+    load_starke_table(duckdb, "raw_employees", query)
 
 
 @asset(deps=[create_duckdb_with_schema],
        group_name="extract_from_starke")
 def raw_receipts(duckdb: DuckDBResource) -> None:
-    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
-    starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
-
-    engine = sqlalchemy.create_engine(
-        'mssql+pyodbc://' + STARKE_PRAXIS_USER + ':' + STARKE_PRAXIS_PASSWORD + '@' + starke_mssql_server + '/' + starke_praxis_db + '?driver=ODBC+Driver+18+for+SQL+Server',
-        connect_args={"TrustServerCertificate": "yes"})
-
-    con = engine.connect()
-
     query = """
                 SELECT
                         REZEPT.Nr,
@@ -407,29 +369,12 @@ def raw_receipts(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
-    result = con.execute(sqlalchemy.text(query))
-    df_result = pd.DataFrame(result.fetchall())
-
-    with duckdb.get_connection() as conn:
-        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_receipts_temp AS SELECT * FROM df_result;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_receipts;")
-        conn.execute("ALTER TABLE raw_starke.raw_receipts_temp RENAME TO raw_receipts;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_receipts_temp;")
+    load_starke_table(duckdb, "raw_receipts", query)
 
 
 @asset(deps=[create_duckdb_with_schema],
        group_name="extract_from_starke")
 def raw_invoices(duckdb: DuckDBResource) -> None:
-    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
-    starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
-
-    engine = sqlalchemy.create_engine(
-        'mssql+pyodbc://' + STARKE_PRAXIS_USER + ':' + STARKE_PRAXIS_PASSWORD + '@' + starke_mssql_server + '/' + starke_praxis_db + '?driver=ODBC+Driver+18+for+SQL+Server',
-        connect_args={"TrustServerCertificate": "yes"})
-
-    con = engine.connect()
-
     query = """
                 SELECT
                         RECHNUNG.Nr,
@@ -501,29 +446,12 @@ def raw_invoices(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
-    result = con.execute(sqlalchemy.text(query))
-    df_result = pd.DataFrame(result.fetchall())
-
-    with duckdb.get_connection() as conn:
-        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_invoices_temp AS SELECT * FROM df_result;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoices;")
-        conn.execute("ALTER TABLE raw_starke.raw_invoices_temp RENAME TO raw_invoices;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoices_temp;")
+    load_starke_table(duckdb, "raw_invoices", query)
 
 
 @asset(deps=[create_duckdb_with_schema],
        group_name="extract_from_starke")
 def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
-    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
-    starke_praxis_db = config.get('STARKE_PRAXIS', 'database')
-
-    engine = sqlalchemy.create_engine(
-        'mssql+pyodbc://' + STARKE_PRAXIS_USER + ':' + STARKE_PRAXIS_PASSWORD + '@' + starke_mssql_server + '/' + starke_praxis_db + '?driver=ODBC+Driver+18+for+SQL+Server',
-        connect_args={"TrustServerCertificate": "yes"})
-
-    con = engine.connect()
-
     query = """
                 SELECT
                         RECHNZEILE.Nr,
@@ -568,23 +496,7 @@ def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
                 ;      
             """
 
-    result = con.execute(sqlalchemy.text(query))
-    df_result = pd.DataFrame(result.fetchall())
-
-    with duckdb.get_connection() as conn:
-        conn.execute(SET_PANDAS_ANALYZE_SAMPLE)
-        conn.execute("CREATE TABLE IF NOT EXISTS raw_starke.raw_invoice_line_items_temp AS SELECT * FROM df_result;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoice_line_items;")
-        conn.execute("ALTER TABLE raw_starke.raw_invoice_line_items_temp RENAME TO raw_invoice_line_items;")
-        conn.execute("DROP TABLE IF EXISTS raw_starke.raw_invoice_line_items_temp;")
-
-
-@asset(deps=[dagster_dbt.dbt_manifest_asset_selection.AssetKey("fct_receipts_to_appointments"),
-             dagster_dbt.dbt_manifest_asset_selection.AssetKey("fct_accounting_documents"),
-             dagster_dbt.dbt_manifest_asset_selection.AssetKey("dim_receipts")],
-       group_name="rebuild_evidence_sources")
-def copy_sources_to_evidence() -> None:
-    os.system('cd $DAGSTER_HOME/../sa_evidence && npm run sources')
+    load_starke_table(duckdb, "raw_invoice_line_items", query)
 
 
 @asset(deps=[install_requirements], group_name="pre_dbt_run")
@@ -594,7 +506,7 @@ def parse_dbt() -> None:
 
 @asset(deps=[parse_dbt], group_name="pre_dbt_run")
 def reload_code_location() -> None:
-    client = DagsterGraphQLClient("127.0.0.1", port_number=2999)
+    client = DagsterGraphQLClient("127.0.0.1", port_number=3000)
     reload_info: ReloadRepositoryLocationInfo = client.reload_repository_location(
         "sa_dagster"
     )

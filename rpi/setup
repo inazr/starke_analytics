@@ -13,8 +13,8 @@ sudo rpi-update
 sudo apt update
 sudo apt upgrade
 
-4.
-# https://medium.com/python-mvp/upgrade-python-3-10-to-3-11-on-ubuntu-22-04-2f63e4d326f9
+4. Install uv (it also installs the right Python version):
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 5. Set DAGSTER_HOME:
 
@@ -44,10 +44,6 @@ source ~/.bashrc
 sudo apt-get install -y unixodbc-dev
 
 
-# CREATE requirements.txt
+# INSTALL dependencies (Python + packages from pyproject.toml + uv.lock)
 
-pip freeze > requirements.txt
-
-# INSTALL requirements.txt
-
-pip install -r requirements.txt
+cd ~/starke_analytics && uv sync
