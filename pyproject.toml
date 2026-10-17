@@ -15,6 +15,7 @@ dependencies = [
     "sqlalchemy>=2.1",
     "pyodbc>=5.3",
     "python-dotenv>=1.0",
+    "dagster-dg-cli>=1.13.26",
 ]
 
 [dependency-groups]
@@ -23,6 +24,10 @@ dev = ["pytest>=9.1"]
 [tool.uv]
 package = false  # nothing to install: dagster loads the code from sa_dagster/
 
-[tool.dagster]
-module_name = "sa_dagster.sa_dagster"  # folder sa_dagster/, package sa_dagster/
+[tool.dg]
+directory_type = "project"
+
+[tool.dg.project]
+root_module = "sa_dagster"
+code_location_target_module = "sa_dagster.sa_dagster"  # its __init__.py builds Definitions
 code_location_name = "sa_dagster"  # reload_code_location reloads it by this name

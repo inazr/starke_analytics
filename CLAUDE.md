@@ -27,7 +27,7 @@ The owner must be able to read and understand every line. Simple beats clever.
    9.2. **Target platform: Docker on Unraid.** `rpi/setup` is the old Raspberry Pi setup.
    9.3. **Planned:** a Dagster job that extracts every 6 hours. Add it only after the pipeline is verified end-to-end.
    9.4. One Python project for the whole repo: root `pyproject.toml` + `uv.lock` (Python 3.13), venv in root `.venv`. Dagster and dbt share it.
-10. **`sa_dagster/`** – Orchestration. Dagster loads `sa_dagster.sa_dagster` (set in `[tool.dagster]` in `pyproject.toml`); its `__init__.py` builds the `Definitions` object (assets, jobs, resources). `sa_dagster/` is also `DAGSTER_HOME`: `dagster.yaml` plus the run history Dagster writes there (`history/`, `schedules/`, `storage/`, all git-ignored).
+10. **`sa_dagster/`** – Orchestration. Dagster loads `sa_dagster.sa_dagster` (set in `[tool.dg.project]` in `pyproject.toml`, together with the code location name `sa_dagster`); its `__init__.py` builds the `Definitions` object (assets, jobs, resources). `sa_dagster/` is also `DAGSTER_HOME`: `dagster.yaml` plus the run history Dagster writes there (`history/`, `schedules/`, `storage/`, all git-ignored).
    10.1. `assets/assets.py`: network discovery (finds the MSSQL host on the LAN and writes it to `config.ini`), extraction of 5 Starke tables into `raw_starke.raw_*`, and pre-run helper assets (git pull, `uv sync`, `dbt parse`, code-location reload). Shared helpers: `get_mssql_engine()`, `load_starke_table()`, `save_config()`.
    10.2. `assets/dbt.py`: one `@dbt_assets` that runs `dbt build`. It reads `sa_dbt/target/manifest.json`, so **that manifest must exist** (run `dbt parse`) before Dagster can load.
    10.3. `assets/constants.py`: secrets from the root `.env` via `python-dotenv` (`STARKE_PRAXIS_PORT`, `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). The DuckDB file comes from `DUCKDB_PATH` in `.env` (absolute path), passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. `config.ini` comes from `CONFIG_FILE_PATH` in `.env` (absolute path). Only `sa_dbt/` is derived from the repo location.
@@ -64,8 +64,8 @@ uv run dbt test  --target dev --select stg_invoices    # tests of one model
 uv run dbt show  --target dev --select dim_receipts --limit 10
 
 # Dagster (repo root; needs a .env with the variables in 10.3 and DAGSTER_HOME=<repo>/sa_dagster)
-./dagster_dev_startup.sh                          # sets DAGSTER_HOME + uv run dagster dev, UI on http://localhost:3000
-uv run dagster definitions validate               # check that all definitions load
+./dagster_dev_startup.sh                          # sets DAGSTER_HOME + uv run dg dev, UI on http://localhost:3000
+uv run dg check defs --no-check-yaml              # check that all definitions load
 uv run pytest sa_dagster/sa_dagster_tests         # tests (currently empty)
 uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single test
 
