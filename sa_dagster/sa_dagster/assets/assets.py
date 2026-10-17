@@ -102,14 +102,21 @@ def get_correct_db():
                 FROM
                         master.sys.sysdatabases
                 WHERE   1=1
-                  AND   sysdatabases.name LIKE 'SP9_%'
-                  ;      
+                  -- [_] is a literal underscore; a plain _ in LIKE matches any character
+                  AND   sysdatabases.name LIKE 'SP9[_]%'
+                ORDER BY
+                        sysdatabases.name
+                  ;
             """
 
     with engine.connect() as con:
-        result = con.execute(sqlalchemy.text(query))
-        config.set('STARKE_PRAXIS', 'database', result.fetchall()[0][0])
+        databases = [row[0] for row in con.execute(sqlalchemy.text(query))]
 
+    if len(databases) != 1:
+        raise Failure(f'Expected exactly one Starke database (SP9_...), found: {databases}. '
+                      f'Set database in config.ini by hand.')
+
+    config.set('STARKE_PRAXIS', 'database', databases[0])
     save_config()
 
 
