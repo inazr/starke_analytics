@@ -31,7 +31,7 @@ The owner must be able to read and understand every line. Simple beats clever.
    10.1. `assets/assets.py`: network discovery (finds the MSSQL host on the LAN and writes it to `config.ini`), extraction of 5 Starke tables into `raw_starke.raw_*`, and pre-run helper assets (git pull, `uv sync`, `dbt parse`, code-location reload). Shared helpers: `get_mssql_engine()`, `load_starke_table()`, `save_config()`.
    10.2. `assets/dbt.py`: one `@dbt_assets` that runs `dbt build`. It reads `sa_dbt/target/manifest.json`, so **that manifest must exist** (run `dbt parse`) before Dagster can load.
    10.3. `assets/constants.py`: secrets from the root `.env` via `python-dotenv` (`STARKE_PRAXIS_PORT`, `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). The DuckDB file comes from `DUCKDB_PATH` in `.env` (absolute path), passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. `config.ini` comes from `CONFIG_FILE_PATH` in `.env` (absolute path). Only `sa_dbt/` is derived from the repo location.
-   10.4. Runtime state (server IP, DB name, `run_network_discovery` flag) is stored in root `config.ini`. It is not passed between assets.
+   10.4. Runtime state (server IP, DB name, `run_network_discovery` flag) is stored in root `config.ini` (git-ignored; template: `config.ini.example`). It is not passed between assets.
 11. **`sa_dbt/`** – Transformations on DuckDB (`duckdb/starke_praxis.duckdb`).
    11.1. `models/source/starke_praxis.yml`: sources with `meta.dagster.asset_key` matching the Python asset names. This is what links Python and dbt lineage in Dagster.
    11.2. `models/staging/starke_praxis/stg_*.sql`: rename German source columns to English snake_case, cast types, and convert Starke dates.
