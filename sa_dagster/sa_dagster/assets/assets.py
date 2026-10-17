@@ -3,12 +3,15 @@ from dagster import asset, DagsterInstance, OpExecutionContext
 import socket
 import sqlalchemy
 import os
+import shutil
 import configparser
 
 import pandas as pd
 from dagster_duckdb import DuckDBResource
 
-from .constants import STARKE_PRAXIS_PORT, STARKE_PRAXIS_USER, STARKE_PRAXIS_PASSWORD, CONFIG_FILE_PATH
+from .constants import (STARKE_PRAXIS_PORT, STARKE_PRAXIS_USER, STARKE_PRAXIS_PASSWORD, CONFIG_FILE_PATH,
+                        DUCKDB_PATH, SUPERSET_DUCKDB_PATH)
+from .dbt import dbt_analytics
 
 from dagster_graphql import (
     DagsterGraphQLClient,
@@ -501,3 +504,17 @@ def reload_code_location() -> None:
     reload_info: ReloadRepositoryLocationInfo = client.reload_repository_location(
         "sa_dagster"
     )
+
+
+@asset(deps=[dbt_analytics], group_name="superset")
+def copy_duckdb_for_superset(duckdb: DuckDBResource) -> None:
+    # Superset reads its own copy, because DuckDB allows one writer or several readers, never both
+    with duckdb.get_connection() as conn:
+        # Write everything from the .wal file into the main file, so the copy is complete
+        conn.execute("CHECKPOINT;")
+
+    os.makedirs(os.path.dirname(SUPERSET_DUCKDB_PATH), exist_ok=True)
+    tmp_path = SUPERSET_DUCKDB_PATH + '.tmp'
+    shutil.copy2(DUCKDB_PATH, tmp_path)
+    # Atomic rename: Superset never sees a half-copied file
+    os.replace(tmp_path, SUPERSET_DUCKDB_PATH)

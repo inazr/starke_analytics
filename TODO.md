@@ -34,7 +34,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 ## Dagster code
 
 13. **Job done (2026-10-17), schedule open.** Job `extract_and_transform` selects the groups `extraction_entry_point`, `extract_from_starke`, `staging`, `core` (15 assets). The old job `dbt_run_stg_starke` was removed. Still open: the 6-hour schedule for this job, once the pipeline is verified end-to-end.
-14. **The Superset copy is decided but not built:** copy `starke_praxis.duckdb` after dbt finishes.
+14. **Done (2026-10-17):** asset `copy_duckdb_for_superset` (group `superset`, part of `extract_and_transform`) runs after dbt: `CHECKPOINT`, copy to `<target>.tmp`, then atomic `os.replace` to `SUPERSET_DUCKDB_PATH` (`.env`). Locally `duckdb/superset/starke_praxis.duckdb`.
 15. **The pre-run assets use `os.system`:** `git_pull`, `install_requirements`, `parse_dbt`. Failures don't fail the run.
 16. **`git_pull` was kept.** Decide whether it's still needed, especially with Docker.
 17. **`check_server_online_status` uses `print()`** and stops the run through `run_launcher.terminate`.

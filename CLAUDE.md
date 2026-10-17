@@ -23,7 +23,7 @@ The owner must be able to read and understand every line. Simple beats clever.
 
 9. ELT pipeline for a physiotherapy practice:
    `Starke Praxis (MSSQL, LAN) → Dagster assets (pandas) → DuckDB raw_starke.* → dbt → DuckDB stg_starke.* / core.* → Superset`
-   9.1. **Superset** (separate, not in this repo) reads its **own copy** of `duckdb/starke_praxis.duckdb`. The pipeline copies the file after dbt finishes, so Superset never opens the file Dagster writes to. Only `core` models are meant for Superset.
+   9.1. **Superset** (separate, not in this repo) reads its **own copy** of `duckdb/starke_praxis.duckdb`. The asset `copy_duckdb_for_superset` copies the file to `SUPERSET_DUCKDB_PATH` (`.env`) after dbt finishes, so Superset never opens the file Dagster writes to. Only `core` models are meant for Superset.
    9.2. **Target platform: Docker on Unraid.** `rpi/setup` is the old Raspberry Pi setup.
    9.3. **Planned:** a Dagster job that extracts every 6 hours. Add it only after the pipeline is verified end-to-end.
    9.4. One Python project for the whole repo: root `pyproject.toml` + `uv.lock` (Python 3.13), venv in root `.venv`. Dagster and dbt share it.
