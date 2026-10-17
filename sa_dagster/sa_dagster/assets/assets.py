@@ -4,6 +4,8 @@ import socket
 import sqlalchemy
 import os
 import shutil
+import subprocess
+import json
 import configparser
 
 import pandas as pd
@@ -28,8 +30,10 @@ def save_config() -> None:
         config.write(configfile)
 
 
-def get_mssql_engine(database: str) -> sqlalchemy.Engine:
-    server = config.get('NETWORK', 'last_known_starke_mssql_server')
+def get_mssql_engine(database: str, server: str | None = None) -> sqlalchemy.Engine:
+    # Default: the server saved by discover_network
+    if server is None:
+        server = config.get('NETWORK', 'last_known_starke_mssql_server')
     url = (f'mssql+pyodbc://{STARKE_PRAXIS_USER}:{STARKE_PRAXIS_PASSWORD}@{server}/{database}'
            '?driver=ODBC+Driver+18+for+SQL+Server')
     return sqlalchemy.create_engine(url, connect_args={"TrustServerCertificate": "yes"})
@@ -48,54 +52,34 @@ def load_starke_table(duckdb: DuckDBResource, table_name: str, query: str) -> No
         conn.execute(f"CREATE OR REPLACE TABLE raw_starke.{table_name} AS SELECT * FROM df_result;")
 
 
-@asset(group_name="discover_network")
-def get_local_ip():
-    # https://stackoverflow.com/questions/166506/finding-local-ip-addresses-using-pythons-stdlib
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.settimeout(0)
-    try:
-        # doesn't even have to be reachable
-        s.connect(('10.254.254.254', 1))
-        local_ip = s.getsockname()[0]
-    except Exception:
-        local_ip = '127.0.0.1'
-    finally:
-        s.close()
+def get_allowed_tailscale_ips(context: AssetExecutionContext) -> list[str]:
+    """IPv4 addresses of the online Tailscale peers whose HostName is in allowed_servers (config.ini)."""
+    # Only allowlisted hosts get the Starke login; never scan the LAN, any device there could open port 1433
+    allowed = [name.strip().lower() for name in config.get('NETWORK', 'allowed_servers').split(',')]
 
-    config.set('NETWORK', 'local_ip', local_ip)
+    if shutil.which('tailscale') is None:
+        raise Failure('tailscale command not found. Install Tailscale or set the server in config.ini by hand.')
 
-    save_config()
+    result = subprocess.run(['tailscale', 'status', '--json'], capture_output=True, text=True, check=True)
+    peers = json.loads(result.stdout).get('Peer') or {}
 
-
-@asset(deps=[get_local_ip],
-       group_name="discover_network")
-def get_list_of_host_with_open_mssql_port():
-    # https://www.tutorialspoint.com/python_penetration_testing/python_penetration_testing_network_scanner.htm
-
-    local_ip = config.get('NETWORK', 'local_ip')
-
-    ip_range = '.'.join(local_ip.split('.')[:3])
-
-    for i in range(1, 255):
-        ip: str = f'{ip_range}.{i}'
-        socket.setdefaulttimeout(0.1)
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = s.connect_ex((ip, STARKE_PRAXIS_PORT))
-        # 0: open, 1: closed
-        if result == 0:
-            break
-
-    config.set('NETWORK', 'last_known_starke_mssql_server', ip)
-
-    save_config()
+    ips = [peer['TailscaleIPs'][0]  # IPv4 first, then IPv6
+           for peer in peers.values()
+           if peer['HostName'].lower() in allowed
+           and peer['Online']
+           and not peer.get('ShareeNode')]  # shared in from another tailnet
+    context.log.info(f'Online allowlisted Tailscale peers {allowed}: {ips}')
+    return ips
 
 
-@asset(deps=[get_list_of_host_with_open_mssql_port],
-       group_name="discover_network")
-def get_correct_db():
-    engine = get_mssql_engine('master')
+def is_port_open(ip: str, timeout: float) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(timeout)
+        return s.connect_ex((ip, STARKE_PRAXIS_PORT)) == 0
 
+
+def get_starke_databases(context: AssetExecutionContext, server: str) -> list[str]:
+    """Names of all Starke databases (SP9_...) on a server. Empty if the login fails."""
     query = """
                 SELECT 
                         sysdatabases.name
@@ -109,26 +93,40 @@ def get_correct_db():
                   ;
             """
 
-    with engine.connect() as con:
-        databases = [row[0] for row in con.execute(sqlalchemy.text(query))]
+    try:
+        with get_mssql_engine('master', server).connect() as con:
+            return [row[0] for row in con.execute(sqlalchemy.text(query))]
+    except sqlalchemy.exc.DBAPIError as error:
+        # An open port 1433 can be a different SQL Server where the Starke login doesn't work
+        context.log.warning(f'Login to {server} failed: {error}')
+        return []
 
-    if len(databases) != 1:
-        raise Failure(f'Expected exactly one Starke database (SP9_...), found: {databases}. '
-                      f'Set database in config.ini by hand.')
 
-    config.set('STARKE_PRAXIS', 'database', databases[0])
+@asset(group_name="discover_network")
+def find_starke_server(context: AssetExecutionContext) -> None:
+    # Tailscale peers can be relayed, so allow 1 s per host
+    open_ips = [ip for ip in get_allowed_tailscale_ips(context) if is_port_open(ip, 1)]
+    context.log.info(f'Port {STARKE_PRAXIS_PORT} is open on: {open_ips}')
+
+    # An open port only makes a host a candidate; the SP9_ database proves it is the Starke server
+    found = [(ip, database) for ip in open_ips for database in get_starke_databases(context, ip)]
+
+    if len(found) != 1:
+        raise Failure(f'Expected exactly one Starke database (SP9_...) on the allowlisted servers, found: {found}. '
+                      f'Check allowed_servers, or set last_known_starke_mssql_server and database in config.ini by hand.')
+
+    server, database = found[0]
+    config.set('NETWORK', 'last_known_starke_mssql_server', server)
+    config.set('STARKE_PRAXIS', 'database', database)
     save_config()
+    context.log.info(f'Starke server: {server}, database: {database}')
 
 
 @asset(group_name="extraction_entry_point")
 def check_server_online_status(context: AssetExecutionContext) -> None:
     server = config.get('NETWORK', 'last_known_starke_mssql_server')
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.settimeout(1)
-        result = s.connect_ex((server, STARKE_PRAXIS_PORT))
-
-    if result != 0:
+    if not is_port_open(server, 1):
         raise Failure(f'Starke SQL Server {server}:{STARKE_PRAXIS_PORT} is not reachable. '
                       f'If its IP changed, run the job discover_network.')
 

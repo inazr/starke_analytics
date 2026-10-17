@@ -11,10 +11,8 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
    1.4. Root cause: the Microsoft formula says `depends_on "openssl"` without a version. Homebrew now resolves that name to `openssl@4` and made `openssl@3` keg-only. The driver loads OpenSSL from one fixed path, `/opt/homebrew/opt/openssl/lib/`. The upstream fix would be `depends_on "openssl@3"`.
    1.5. **Worked around locally (2026-10-17):** `ln -sfn ../Cellar/openssl@3/3.6.4 /opt/homebrew/opt/openssl`. Login to `10.0.0.120` now works and finds the database `SP9_400502848`.
    1.6. This breaks again whenever Homebrew updates `openssl@4` and resets the link; run the same command again. To undo: `brew reinstall openssl@4`. The problem doesn't exist in Docker/Linux (TODO 24).
-2. **The network scan from Dagster finds nothing.** In the Dagster run it finished in 161 ms without a hit. From Claude's shell the same scan took 26 s and found port 1433 open on `10.0.0.120`.
-   2.1. Cause: macOS asked whether PyCharm may access the local network. You allowed it, but the Dagster process that was already running had been started before that.
-   2.2. Next step: restart Dagster and run `discover_network` again.
-3. **The scan silently saves a wrong IP when it finds nothing.** The loop simply ends, and the last address tried (`10.0.0.254`) is written to `config.ini` as the "Starke server". The next step then fails with a misleading login timeout.
+2. **Obsolete (2026-10-17):** the LAN scan was removed (TODO 31). Discovery only uses allowlisted Tailscale peers.
+3. **Done (2026-10-17):** discovery (`find_starke_server`) verifies each candidate by its `SP9_` database and raises `Failure` unless exactly one is found. It no longer saves the last address tried.
 4. **Login timeout errors are slow and unclear.** The failed run waited about 17 s and only said `Login timeout expired`, with no hint of which host was tried. **Partly fixed by TODO 17:** an unreachable server now fails after 1 s with the host name. Still open: a reachable server with wrong login or database name.
 
 ## Paths and `.env`
@@ -27,7 +25,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 
 8. **Done (2026-10-17):** removed `DUCKDB_USER` and `DUCKDB_PASSWORD` from `.env`. Added `.env.example` with the 5 variables the code uses.
 9. **Done (2026-10-17):** `config.ini` is no longer tracked (`git rm --cached`; the `.gitignore` entry now applies). Added `config.ini.example` with placeholder values. A new setup copies it to the path in `CONFIG_FILE_PATH`.
-10. **Done (2026-10-17):** the placeholder database name (`SP9_123456789`) now only lives in `config.ini.example` (TODO 9); `get_correct_db` writes the real one. The `run_network_discovery` flag was removed: it never started discovery, and its only reader was `create_duckdb_with_schema`. A new setup runs the `discover_network` job once by hand.
+10. **Done (2026-10-17):** the placeholder database name (`SP9_123456789`) now only lives in `config.ini.example` (TODO 9); discovery writes the real one. The `run_network_discovery` flag was removed: it never started discovery, and its only reader was `create_duckdb_with_schema`. A new setup runs the `discover_network` job once by hand.
 11. **Done (2026-10-17):** switched to `dg dev`. Added `dagster-dg-cli` and `[tool.dg]` / `[tool.dg.project]` to `pyproject.toml` (code location name stays `sa_dagster`). `dagster_dev_startup.sh` runs `dg dev --no-check-yaml`, because without that flag `dg` requires a `defs/` folder for components, which this project doesn't use. `[tool.dagster]` was removed; validation is now `dg check defs --no-check-yaml`.
 12. **Accepted (2026-10-17): gRPC log noise** (`fork_posix.cc ... skipping fork() handlers`). `grpcio` logs it at INFO level whenever a Dagster process with gRPC threads starts a subprocess (dbt, git, uv). Harmless, so it stays. If it should go later: `export GRPC_VERBOSITY=ERROR` in `dagster_dev_startup.sh` (logging only) or `GRPC_ENABLE_FORK_SUPPORT=false` (changes behaviour).
 
@@ -39,7 +37,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 16. **Done (2026-10-17):** `git_pull` removed with TODO 15.
 17. **Done (2026-10-17):** `check_server_online_status` raises `Failure` with host, port and the hint to run `discover_network`, so the run is Failed (not Canceled) and downstream assets are skipped. `print()`, `run_launcher.terminate` and the global socket timeout are gone.
 18. **Done (2026-10-17):** `create_duckdb_with_schema` now always creates the schema (the flag is gone, see TODO 10).
-19. **Done (2026-10-17), not yet tested against the server:** `get_correct_db` uses `LIKE 'SP9[_]%'` (a plain `_` is a wildcard), sorts by name, and raises `Failure` listing the names unless exactly one database matches. The server has `SP9` (no match) and `SP9_400502848`.
+19. **Done and tested (2026-10-17):** the database lookup (now in `find_starke_server`) uses `LIKE 'SP9[_]%'` (a plain `_` is a wildcard), sorts by name, and raises `Failure` unless exactly one Starke database is found across all reachable servers. Test run found `100.88.163.113` (Tailscale peer `Tower`) with `SP9_400502848`.
 20. **The password goes into the connection URL as plain text.** Special characters such as `@` or `/` would break the URL; `sqlalchemy.URL.create` would handle that.
 21. **dagster-dbt can rebuild the dbt manifest by itself** (`prepare_if_dev()`). The `parse_dbt` and `reload_code_location` assets are gone (TODO 15), so this is now only about local development: no manual `dbt parse` after model changes.
 22. **There are no tests:** `sa_dagster_tests/test_assets.py` is empty.
@@ -60,9 +58,12 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
     30.2. Option: keep the full copy and only expose `core` in Superset (dataset permissions).
     30.3. Option: also restrict the file permissions of `SUPERSET_DUCKDB_PATH`.
 
+31. **Done (2026-10-17):** discovery only logs in to online Tailscale peers whose `HostName` is in `allowed_servers` (`config.ini`, comma-separated, case-insensitive), skipping shared-in peers. The LAN scan and `get_local_ip` were removed. Before, the Starke login went to every host with port 1433 open (found by an automated security review).
+
 ## Deployment
 
 24. **Docker on Unraid:** needs a Dockerfile/compose file, a volume for `DAGSTER_HOME` and the DuckDB file, and the ODBC driver inside the image.
+    24.1. **Discovery needs Tailscale in the container:** `find_starke_server` calls `tailscale status --json` and fails without the `tailscale` command. Options: host networking on Unraid with the Tailscale CLI available, Tailscale inside the image, or set the server in `config.ini` by hand and don't run `discover_network`.
 25. **`rpi/setup` is obsolete** once Docker is in place.
 26. **Superset's DuckDB driver** must be able to read files written by DuckDB 1.5.
 27. **Merge the branch** `overhaul-uv-latest-versions` into `main` once everything runs.

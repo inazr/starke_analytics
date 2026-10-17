@@ -1,5 +1,5 @@
 [NETWORK]
-local_ip = 127.0.0.1
+allowed_servers = Tower
 last_known_starke_mssql_server = 10.0.0.1
 
 [STARKE_PRAXIS]
