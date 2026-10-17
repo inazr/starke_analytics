@@ -3,9 +3,9 @@ starke_analytics:
   outputs:
     dev:
       type: duckdb
-      path: ../duckdb/starke_praxis.duckdb
+      path: "{{ env_var('DUCKDB_PATH') }}"
       schema: dbt_dev
     prod:
       type: duckdb
-      path: ../duckdb/starke_praxis.duckdb
+      path: "{{ env_var('DUCKDB_PATH') }}"
       schema: dbt_prod # This will switch the schema structure provided in the dbt_project.yml file

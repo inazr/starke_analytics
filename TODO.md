@@ -17,15 +17,15 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 3. **The scan silently saves a wrong IP when it finds nothing.** The loop simply ends, and the last address tried (`10.0.0.254`) is written to `config.ini` as the "Starke server". The next step then fails with a misleading login timeout.
 4. **Login timeout errors are slow and unclear.** The failed run waited about 17 s and only said `Login timeout expired`, with no hint of which host was tried.
 
-## Changed without asking (your decision: keep or revert)
+## Paths and `.env`
 
-5. **Paths are no longer read from `.env`.** `constants.py` now works out `config.ini`, the DuckDB file and `sa_dbt/` from where the repo is (`PROJECT_ROOT`). The alternative is to keep the paths in `.env` and just correct the values there. Not committed yet.
-6. **A missing `config.ini` now fails loudly** (`FileNotFoundError` in `assets.py`) instead of failing later with `No section: 'NETWORK'`. Not committed yet.
-7. **CLAUDE.md 10.3** (was 8.3) was updated to match 5. It would need reverting together with 5.
+5. **Done (2026-10-17):** `DUCKDB_PATH` and `CONFIG_FILE_PATH` come from `.env` again. Dagster uses `EnvVar("DUCKDB_PATH")` on `DuckDBResource`, dbt uses `env_var('DUCKDB_PATH')` in `profiles.yml` (dbt 1.12 loads the root `.env` itself). Only `sa_dbt/` is derived from the repo location.
+6. **Done:** a missing `config.ini` fails loudly (`FileNotFoundError` in `assets.py`). Kept.
+7. **Done:** CLAUDE.md 10.3 describes 5.
 
 ## Configuration and environment
 
-8. **`.env` has variables the code doesn't use:** `DUCKDB_USER` and `DUCKDB_PASSWORD` (never used), and `CONFIG_FILE_PATH` and `DUCKDB_PATH` (unused only if you keep 5).
+8. **Done (2026-10-17):** removed `DUCKDB_USER` and `DUCKDB_PASSWORD` from `.env`. Added `.env.example` with the 5 variables the code uses.
 9. **`config.ini` is tracked by git and is also listed in `.gitignore`.** The discovery run just modified it, so it shows up as changed. Decide whether it should be tracked.
 10. **The database name in `config.ini` is a placeholder** (`SP9_123456789`) until `get_correct_db` succeeds.
 11. **`dagster dev` is "superseded" by `dg dev`** (warning on every start). `dg` needs the extra package `dagster-dg-cli`.

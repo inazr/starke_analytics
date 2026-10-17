@@ -17,6 +17,7 @@ The owner must be able to read and understand every line. Simple beats clever.
 6. When returning a list, number the items instead of using "-" bullets. **Numbers must be unique across the whole reply or document**: never restart at 1 in a new section, keep counting. Nested points use the parent number (8.1, 8.2). The owner references items by number ("fix 3").
 7. **Never fix anything on your own that is a design decision.** Diagnose (read-only checks are fine), write the finding into `TODO.md` with options, and only change what the owner explicitly names.
 8. One topic at a time, and be specific: give the full name and path ("Microsoft ODBC Driver 18 for SQL Server, `/opt/homebrew/lib/libmsodbcsql.18.dylib`"), not "the driver".
+   8.1. **Keep answers short.** Answer the question asked in a few sentences first. No long background, no repeated context, no extra sections.
 
 ## Architecture
 
@@ -29,7 +30,7 @@ The owner must be able to read and understand every line. Simple beats clever.
 10. **`sa_dagster/`** – Orchestration. Dagster loads `sa_dagster.sa_dagster` (set in `[tool.dagster]` in `pyproject.toml`); its `__init__.py` builds the `Definitions` object (assets, jobs, resources). `sa_dagster/` is also `DAGSTER_HOME`: `dagster.yaml` plus the run history Dagster writes there (`history/`, `schedules/`, `storage/`, all git-ignored).
    10.1. `assets/assets.py`: network discovery (finds the MSSQL host on the LAN and writes it to `config.ini`), extraction of 5 Starke tables into `raw_starke.raw_*`, and pre-run helper assets (git pull, `uv sync`, `dbt parse`, code-location reload). Shared helpers: `get_mssql_engine()`, `load_starke_table()`, `save_config()`.
    10.2. `assets/dbt.py`: one `@dbt_assets` that runs `dbt build`. It reads `sa_dbt/target/manifest.json`, so **that manifest must exist** (run `dbt parse`) before Dagster can load.
-   10.3. `assets/constants.py`: secrets from the root `.env` via `python-dotenv` (`STARKE_PRAXIS_PORT`, `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). File paths (`config.ini`, DuckDB file, `sa_dbt/`) are derived from the repo location, not configured.
+   10.3. `assets/constants.py`: secrets from the root `.env` via `python-dotenv` (`STARKE_PRAXIS_PORT`, `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). The DuckDB file comes from `DUCKDB_PATH` in `.env` (absolute path), passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. `config.ini` comes from `CONFIG_FILE_PATH` in `.env` (absolute path). Only `sa_dbt/` is derived from the repo location.
    10.4. Runtime state (server IP, DB name, `run_network_discovery` flag) is stored in root `config.ini`. It is not passed between assets.
 11. **`sa_dbt/`** – Transformations on DuckDB (`duckdb/starke_praxis.duckdb`).
    11.1. `models/source/starke_praxis.yml`: sources with `meta.dagster.asset_key` matching the Python asset names. This is what links Python and dbt lineage in Dagster.
