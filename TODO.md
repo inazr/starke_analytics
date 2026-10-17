@@ -29,7 +29,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 9. **Done (2026-10-17):** `config.ini` is no longer tracked (`git rm --cached`; the `.gitignore` entry now applies). Added `config.ini.example` with placeholder values. A new setup copies it to the path in `CONFIG_FILE_PATH`.
 10. **Done (2026-10-17):** the placeholder database name (`SP9_123456789`) now only lives in `config.ini.example` (TODO 9); `get_correct_db` writes the real one. The `run_network_discovery` flag was removed: it never started discovery, and its only reader was `create_duckdb_with_schema`. A new setup runs the `discover_network` job once by hand.
 11. **Done (2026-10-17):** switched to `dg dev`. Added `dagster-dg-cli` and `[tool.dg]` / `[tool.dg.project]` to `pyproject.toml` (code location name stays `sa_dagster`). `dagster_dev_startup.sh` runs `dg dev --no-check-yaml`, because without that flag `dg` requires a `defs/` folder for components, which this project doesn't use. `[tool.dagster]` was removed; validation is now `dg check defs --no-check-yaml`.
-12. **gRPC log noise** (`fork_posix.cc ... skipping fork() handlers`) appears on every run. Harmless, but it clutters the logs.
+12. **Accepted (2026-10-17): gRPC log noise** (`fork_posix.cc ... skipping fork() handlers`). `grpcio` logs it at INFO level whenever a Dagster process with gRPC threads starts a subprocess (dbt, git, uv). Harmless, so it stays. If it should go later: `export GRPC_VERBOSITY=ERROR` in `dagster_dev_startup.sh` (logging only) or `GRPC_ENABLE_FORK_SUPPORT=false` (changes behaviour).
 
 ## Dagster code
 
