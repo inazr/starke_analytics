@@ -53,7 +53,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
     28.3. Even `(receipt_id, invoice_recipient_type)` isn't unique: 12 receipts have two `A` invoices.
     28.4. This also explains the existing comment in `fct_accounting_documents`: `--stg_invoices.receipt_id -- this looks to be incorrect`.
     28.5. Option: in `stg_invoices`, use `NULLIF(raw_invoices.REZ_Nr, 0) AS receipt_id` (the same NULLIF pattern as the other columns), and replace `unique` with a `relationships` test to `stg_receipts.receipt_id`.
-29. **Probably obsolete (2026-10-17):** the job `dbt_run_stg_starke` was removed (TODO 13); `extract_and_transform` includes the 3 core models. Check on the next run. **Your dbt run only built the 5 staging views.** It reported "Found 8 models", but the 3 core tables (`fct_receipts_to_appointments`, `fct_accounting_documents`, `dim_receipts`) weren't in it. Check which assets/job were selected; for `tag:stg_starke+` to include the core models, the job has to select them as well.
+29. **Done (2026-10-17):** run `1d4887e3` of job `extract_and_transform` built all 3 core tables (`fct_receipts_to_appointments`, `fct_accounting_documents`, `dim_receipts`). The old job `dbt_run_stg_starke`, which only built staging, was removed (TODO 13).
 
 ## Deployment
 
