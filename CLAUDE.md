@@ -32,6 +32,7 @@ The owner must be able to read and understand every line. Simple beats clever.
    10.2. `assets/dbt.py`: one `@dbt_assets` that runs `dbt build`. It reads `sa_dbt/target/manifest.json`, so **that manifest must exist** (run `dbt parse`) before Dagster can load.
    10.3. `assets/constants.py`: secrets from the root `.env` via `python-dotenv` (`STARKE_PRAXIS_PORT`, `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). The DuckDB file comes from `DUCKDB_PATH` in `.env` (absolute path), passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. `config.ini` comes from `CONFIG_FILE_PATH` in `.env` (absolute path). Only `sa_dbt/` is derived from the repo location.
    10.4. Runtime state (server IP, DB name) is stored in root `config.ini` (git-ignored; template: `config.ini.example`). It is not passed between assets.
+   10.5. `jobs/__init__.py`: `discover_network` (run by hand on first setup or a new network) and `extract_and_transform` (extraction + dbt + Superset copy; the planned schedule targets this job). There are no self-updating assets: code updates (`git pull`, `uv sync`, `dbt parse`) are a deployment step (new image).
 11. **`sa_dbt/`** – Transformations on DuckDB (`duckdb/starke_praxis.duckdb`).
    11.1. `models/source/starke_praxis.yml`: sources with `meta.dagster.asset_key` matching the Python asset names. This is what links Python and dbt lineage in Dagster.
    11.2. `models/staging/starke_praxis/stg_*.sql`: rename German source columns to English snake_case, cast types, and convert Starke dates.
@@ -43,6 +44,7 @@ The owner must be able to read and understand every line. Simple beats clever.
 
 12. **Starke dates are integers counting days since 1801-01-01**: `DATE '1801-01-01' + to_days(col::INT)`. Values like `0` or `< 70000` mean "no date".
 13. **PII is hashed in the MSSQL extraction query** (`HASHBYTES('SHA2_512', ...)`) before it reaches DuckDB. Never pull patient names, birth dates, insurance numbers, or doctor names unhashed.
+   13.1. The Starke SQL Server has two `SP9*` databases: `SP9_400502848` (the data) and `SP9` (empty, newer schema). In T-SQL `LIKE`, `_` is a wildcard; use `[_]` for a literal underscore.
 14. Key German terms: Rezept = receipt/prescription, Termin = appointment, Rechnung = invoice, Rechnungszeile = invoice line item, Mitarbeiter = employee, Zuzahlung = co-payment, Pauschale = flat rate, Mahndatum = dunning date.
 15. **Invoices (`RECHNUNG`) aren't 1:1 with receipts.** `REZ_Nr = 0` means "no receipt" (mostly cancellations, status `S`/`G`). One receipt gets several invoices, one per recipient (`invoice_recipient_type`, e.g. `Z → K`). Probable meaning: Z = Zuzahlung, K = Krankenkasse, P = Privat, A = Ausfall. Take `receipt_id` from the invoice line items.
 
@@ -90,11 +92,17 @@ uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single t
 ### Dagster
 
 25. One asset = one table or one side effect. Declare order with `deps=[...]` and logical grouping with `group_name`.
+   25.1. `@dbt_assets` runs as **one step** (one `dbt build`): anything downstream of any dbt asset waits for the whole build. To depend on a dbt group, filter `dbt_analytics.keys` by `dbt_analytics.group_names_by_key` (see `core_assets` in `assets.py`).
 26. Connect to MSSQL only via `get_mssql_engine(database)`, and write `config.ini` only via `save_config()`.
 27. Access DuckDB only through the `DuckDBResource` parameter (`duckdb.get_connection()` as a context manager). Never open your own connection.
 28. Use `context.log` instead of `print()`, and `subprocess.run(..., check=True)` instead of `os.system` so that failures fail the run.
+   28.1. To stop a run, raise `dagster.Failure("<what, which host, what to do>")`. Never `run_launcher.terminate` (run shows as Canceled). Set socket timeouts per socket (`s.settimeout`), not with `socket.setdefaulttimeout`.
+   28.2. `dg dev` and `dg check defs` need `--no-check-yaml`: without it `dg` demands a components `defs/` folder, which this project doesn't use.
 29. Jobs select assets by group name (`AssetSelection.groups(...)`), so a renamed group silently empties a job. Check `jobs/__init__.py` when you change groups.
 30. Schedules and sensors only run once they are added to `Definitions(...)`.
+   30.1. Test one asset in-process: `load_dotenv('.env')`, then `dagster.materialize([asset], resources={...})`. Changing `assets.config` in such a test stays in memory unless `save_config()` runs.
+   30.2. Run history (read-only via Python `sqlite3` with `file:...?mode=ro`, the `sqlite3` CLI can't open it here): runs in `sa_dagster/history/runs.db`, latest materialization per asset in `sa_dagster/history/runs/index.db` table `asset_keys`. If the UI still shows "Materializing…" after a successful run, the browser tab is stale: reload it.
+   30.3. A test `dg dev` on another port starts 4 processes (webserver, daemon, code-server, `api grpc`). Stop all of them afterwards.
 
 ### DuckDB
 
@@ -112,6 +120,7 @@ uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single t
 36. **ODBC driver needs OpenSSL 3.** `msodbcsql18` (Homebrew) loads OpenSSL from the fixed path `/opt/homebrew/opt/openssl/lib/`. Homebrew points that path to `openssl@4`, which the driver doesn't support (error: `OpenSSL library could not be loaded`). Fix: `ln -sfn ../Cellar/openssl@3/3.6.4 /opt/homebrew/opt/openssl`. This breaks again after every `openssl@4` upgrade. Docker/Linux doesn't have this problem.
 37. **macOS Local Network permission:** without it, the network scan fails silently in a few milliseconds. Allow the IDE/terminal under System Settings → Privacy & Security → Local Network, then **restart Dagster**.
 38. **Login timeout to MSSQL** usually means the wrong IP in `config.ini`: if the scan finds nothing, it saves the last address it tried (`x.x.x.254`).
+   38.1. **Host answers ping but port 1433 is closed** (`nc -z -G 2 <ip> 1433`): the SQL Server service is stopped (seen in the evening). Wait instead of rescanning the network.
 
 ## Open points
 
