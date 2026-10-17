@@ -1,4 +1,4 @@
-from dagster import asset, DagsterInstance, OpExecutionContext
+from dagster import asset, AssetExecutionContext, Failure
 
 import socket
 import sqlalchemy
@@ -113,21 +113,19 @@ def get_correct_db():
     save_config()
 
 
-@asset(deps=[],
-       group_name="extraction_entry_point")
-def check_server_online_status(context: OpExecutionContext) -> None:
-    starke_mssql_server = config.get('NETWORK', 'last_known_starke_mssql_server')
+@asset(group_name="extraction_entry_point")
+def check_server_online_status(context: AssetExecutionContext) -> None:
+    server = config.get('NETWORK', 'last_known_starke_mssql_server')
 
-    # 1 second timeout
-    socket.setdefaulttimeout(1)
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    result = s.connect_ex((starke_mssql_server, STARKE_PRAXIS_PORT))
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(1)
+        result = s.connect_ex((server, STARKE_PRAXIS_PORT))
 
     if result != 0:
-        # Terminate the run
-        instance = DagsterInstance.get()
-        termination_result = instance.run_launcher.terminate(context.run.run_id)
-        print(f"Run {context.run.run_id} terminated successfully.")
+        raise Failure(f'Starke SQL Server {server}:{STARKE_PRAXIS_PORT} is not reachable. '
+                      f'If its IP changed, run the job discover_network.')
+
+    context.log.info(f'Starke SQL Server {server}:{STARKE_PRAXIS_PORT} is reachable.')
 
 
 @asset(deps=[check_server_online_status],

@@ -15,7 +15,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
    2.1. Cause: macOS asked whether PyCharm may access the local network. You allowed it, but the Dagster process that was already running had been started before that.
    2.2. Next step: restart Dagster and run `discover_network` again.
 3. **The scan silently saves a wrong IP when it finds nothing.** The loop simply ends, and the last address tried (`10.0.0.254`) is written to `config.ini` as the "Starke server". The next step then fails with a misleading login timeout.
-4. **Login timeout errors are slow and unclear.** The failed run waited about 17 s and only said `Login timeout expired`, with no hint of which host was tried.
+4. **Login timeout errors are slow and unclear.** The failed run waited about 17 s and only said `Login timeout expired`, with no hint of which host was tried. **Partly fixed by TODO 17:** an unreachable server now fails after 1 s with the host name. Still open: a reachable server with wrong login or database name.
 
 ## Paths and `.env`
 
@@ -37,7 +37,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 14. **Done (2026-10-17):** asset `copy_duckdb_for_superset` (group `superset`, part of `extract_and_transform`) runs after dbt: `CHECKPOINT`, copy to `<target>.tmp`, then atomic `os.replace` to `SUPERSET_DUCKDB_PATH` (`.env`). Locally `duckdb/superset/starke_praxis.duckdb`.
 15. **Done (2026-10-17):** removed the whole `pre_dbt_run` group (`git_pull`, `install_requirements`, `parse_dbt`, `reload_code_location`). A pipeline that updates its own code is an anti-pattern; code updates become a deployment step: build a new image with `uv sync` + `dbt parse`, restart the code-location container (TODO 24). Locally: `uv run dbt parse` by hand, then reload in the UI.
 16. **Done (2026-10-17):** `git_pull` removed with TODO 15.
-17. **`check_server_online_status` uses `print()`** and stops the run through `run_launcher.terminate`.
+17. **Done (2026-10-17):** `check_server_online_status` raises `Failure` with host, port and the hint to run `discover_network`, so the run is Failed (not Canceled) and downstream assets are skipped. `print()`, `run_launcher.terminate` and the global socket timeout are gone.
 18. **Done (2026-10-17):** `create_duckdb_with_schema` now always creates the schema (the flag is gone, see TODO 10).
 19. **`get_correct_db` takes the first `SP9_%` database** (`[0][0]`). It fails if there are none and is ambiguous if there are several.
 20. **The password goes into the connection URL as plain text.** Special characters such as `@` or `/` would break the URL; `sqlalchemy.URL.create` would handle that.
