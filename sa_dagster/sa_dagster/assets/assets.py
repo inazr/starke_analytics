@@ -16,7 +16,8 @@ from dagster_graphql import (
 )
 
 config = configparser.ConfigParser()
-config.read(CONFIG_FILE_PATH)
+if not config.read(CONFIG_FILE_PATH):
+    raise FileNotFoundError(f'Config file not found: {CONFIG_FILE_PATH}')
 
 SET_PANDAS_ANALYZE_SAMPLE = """
                             SET GLOBAL pandas_analyze_sample=10000
