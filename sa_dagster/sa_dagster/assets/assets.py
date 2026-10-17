@@ -122,7 +122,6 @@ def get_correct_db():
     with engine.connect() as con:
         result = con.execute(sqlalchemy.text(query))
         config.set('STARKE_PRAXIS', 'database', result.fetchall()[0][0])
-    config.set('NETWORK', 'run_network_discovery', 'False')
 
     save_config()
 
@@ -137,17 +136,11 @@ def check_server_online_status(context: OpExecutionContext) -> None:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     result = s.connect_ex((starke_mssql_server, STARKE_PRAXIS_PORT))
 
-    if result == 0:
-        config.set('NETWORK', 'run_network_discovery', 'False')
-    else:
-        config.set('NETWORK', 'run_network_discovery', 'True')
-
+    if result != 0:
         # Terminate the run
         instance = DagsterInstance.get()
         termination_result = instance.run_launcher.terminate(context.run.run_id)
         print(f"Run {context.run.run_id} terminated successfully.")
-
-    save_config()
 
 
 @asset(deps=[check_server_online_status],
@@ -158,11 +151,8 @@ def create_duckdb_with_schema(duckdb: DuckDBResource) -> None:
                             ;
                           """
 
-    run_network_discovery = config.get('NETWORK', 'run_network_discovery')
-
-    if run_network_discovery == 'False':
-        with duckdb.get_connection() as conn:
-            conn.execute(create_schema_query)
+    with duckdb.get_connection() as conn:
+        conn.execute(create_schema_query)
 
 
 @asset(deps=[create_duckdb_with_schema],

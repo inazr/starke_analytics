@@ -27,7 +27,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 
 8. **Done (2026-10-17):** removed `DUCKDB_USER` and `DUCKDB_PASSWORD` from `.env`. Added `.env.example` with the 5 variables the code uses.
 9. **Done (2026-10-17):** `config.ini` is no longer tracked (`git rm --cached`; the `.gitignore` entry now applies). Added `config.ini.example` with placeholder values. A new setup copies it to the path in `CONFIG_FILE_PATH`.
-10. **The database name in `config.ini` is a placeholder** (`SP9_123456789`) until `get_correct_db` succeeds.
+10. **Done (2026-10-17):** the placeholder database name (`SP9_123456789`) now only lives in `config.ini.example` (TODO 9); `get_correct_db` writes the real one. The `run_network_discovery` flag was removed: it never started discovery, and its only reader was `create_duckdb_with_schema`. A new setup runs the `discover_network` job once by hand.
 11. **`dagster dev` is "superseded" by `dg dev`** (warning on every start). `dg` needs the extra package `dagster-dg-cli`.
 12. **gRPC log noise** (`fork_posix.cc ... skipping fork() handlers`) appears on every run. Harmless, but it clutters the logs.
 
@@ -38,7 +38,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 15. **The pre-run assets use `os.system`:** `git_pull`, `install_requirements`, `parse_dbt`. Failures don't fail the run.
 16. **`git_pull` was kept.** Decide whether it's still needed, especially with Docker.
 17. **`check_server_online_status` uses `print()`** and stops the run through `run_launcher.terminate`.
-18. **`create_duckdb_with_schema` only creates the schema** when `run_network_discovery == 'False'`, but the `raw_*` assets run either way.
+18. **Done (2026-10-17):** `create_duckdb_with_schema` now always creates the schema (the flag is gone, see TODO 10).
 19. **`get_correct_db` takes the first `SP9_%` database** (`[0][0]`). It fails if there are none and is ambiguous if there are several.
 20. **The password goes into the connection URL as plain text.** Special characters such as `@` or `/` would break the URL; `sqlalchemy.URL.create` would handle that.
 21. **dagster-dbt can rebuild the dbt manifest by itself** (`prepare_if_dev()`). That could replace `parse_dbt` and `reload_code_location`.
