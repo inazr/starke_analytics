@@ -30,4 +30,4 @@ directory_type = "project"
 [tool.dg.project]
 root_module = "sa_dagster"
 code_location_target_module = "sa_dagster.sa_dagster"  # its __init__.py builds Definitions
-code_location_name = "sa_dagster"  # reload_code_location reloads it by this name
+code_location_name = "sa_dagster"  # name shown in the Dagster UI

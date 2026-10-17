@@ -35,13 +35,13 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 
 13. **Job done (2026-10-17), schedule open.** Job `extract_and_transform` selects the groups `extraction_entry_point`, `extract_from_starke`, `staging`, `core` (15 assets). The old job `dbt_run_stg_starke` was removed. Still open: the 6-hour schedule for this job, once the pipeline is verified end-to-end.
 14. **Done (2026-10-17):** asset `copy_duckdb_for_superset` (group `superset`, part of `extract_and_transform`) runs after dbt: `CHECKPOINT`, copy to `<target>.tmp`, then atomic `os.replace` to `SUPERSET_DUCKDB_PATH` (`.env`). Locally `duckdb/superset/starke_praxis.duckdb`.
-15. **The pre-run assets use `os.system`:** `git_pull`, `install_requirements`, `parse_dbt`. Failures don't fail the run.
-16. **`git_pull` was kept.** Decide whether it's still needed, especially with Docker.
+15. **Done (2026-10-17):** removed the whole `pre_dbt_run` group (`git_pull`, `install_requirements`, `parse_dbt`, `reload_code_location`). A pipeline that updates its own code is an anti-pattern; code updates become a deployment step: build a new image with `uv sync` + `dbt parse`, restart the code-location container (TODO 24). Locally: `uv run dbt parse` by hand, then reload in the UI.
+16. **Done (2026-10-17):** `git_pull` removed with TODO 15.
 17. **`check_server_online_status` uses `print()`** and stops the run through `run_launcher.terminate`.
 18. **Done (2026-10-17):** `create_duckdb_with_schema` now always creates the schema (the flag is gone, see TODO 10).
 19. **`get_correct_db` takes the first `SP9_%` database** (`[0][0]`). It fails if there are none and is ambiguous if there are several.
 20. **The password goes into the connection URL as plain text.** Special characters such as `@` or `/` would break the URL; `sqlalchemy.URL.create` would handle that.
-21. **dagster-dbt can rebuild the dbt manifest by itself** (`prepare_if_dev()`). That could replace `parse_dbt` and `reload_code_location`.
+21. **dagster-dbt can rebuild the dbt manifest by itself** (`prepare_if_dev()`). The `parse_dbt` and `reload_code_location` assets are gone (TODO 15), so this is now only about local development: no manual `dbt parse` after model changes.
 22. **There are no tests:** `sa_dagster_tests/test_assets.py` is empty.
 
 ## dbt / SQL (later)
@@ -54,6 +54,11 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
     28.4. This also explains the existing comment in `fct_accounting_documents`: `--stg_invoices.receipt_id -- this looks to be incorrect`.
     28.5. Option: in `stg_invoices`, use `NULLIF(raw_invoices.REZ_Nr, 0) AS receipt_id` (the same NULLIF pattern as the other columns), and replace `unique` with a `relationships` test to `stg_receipts.receipt_id`.
 29. **Done (2026-10-17):** run `1d4887e3` of job `extract_and_transform` built all 3 core tables (`fct_receipts_to_appointments`, `fct_accounting_documents`, `dim_receipts`). The old job `dbt_run_stg_starke`, which only built staging, was removed (TODO 13).
+
+30. **The Superset copy contains all schemas, not only `core`** (found by an automated security review, 2026-10-17). `copy_duckdb_for_superset` copies the whole file, so Superset can also read `raw_starke` and `stg_starke`. CLAUDE.md 9.1 says only `core` is meant for Superset. Impact is limited because PII is already hashed during extraction (CLAUDE.md 13).
+    30.1. Option: build the copy from `core` only (`ATTACH` a new file, `CREATE TABLE ... AS SELECT * FROM core.<model>` per model, then the same atomic rename).
+    30.2. Option: keep the full copy and only expose `core` in Superset (dataset permissions).
+    30.3. Option: also restrict the file permissions of `SUPERSET_DUCKDB_PATH`.
 
 ## Deployment
 

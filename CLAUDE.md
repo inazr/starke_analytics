@@ -28,7 +28,7 @@ The owner must be able to read and understand every line. Simple beats clever.
    9.3. **Planned:** a Dagster job that extracts every 6 hours. Add it only after the pipeline is verified end-to-end.
    9.4. One Python project for the whole repo: root `pyproject.toml` + `uv.lock` (Python 3.13), venv in root `.venv`. Dagster and dbt share it.
 10. **`sa_dagster/`** – Orchestration. Dagster loads `sa_dagster.sa_dagster` (set in `[tool.dg.project]` in `pyproject.toml`, together with the code location name `sa_dagster`); its `__init__.py` builds the `Definitions` object (assets, jobs, resources). `sa_dagster/` is also `DAGSTER_HOME`: `dagster.yaml` plus the run history Dagster writes there (`history/`, `schedules/`, `storage/`, all git-ignored).
-   10.1. `assets/assets.py`: network discovery (finds the MSSQL host on the LAN and writes it to `config.ini`), extraction of 5 Starke tables into `raw_starke.raw_*`, and pre-run helper assets (git pull, `uv sync`, `dbt parse`, code-location reload). Shared helpers: `get_mssql_engine()`, `load_starke_table()`, `save_config()`.
+   10.1. `assets/assets.py`: network discovery (finds the MSSQL host on the LAN and writes it to `config.ini`), extraction of 5 Starke tables into `raw_starke.raw_*`, and the Superset copy (`copy_duckdb_for_superset`). Code updates (git pull, `uv sync`, `dbt parse`) are a deployment step, not assets. Shared helpers: `get_mssql_engine()`, `load_starke_table()`, `save_config()`.
    10.2. `assets/dbt.py`: one `@dbt_assets` that runs `dbt build`. It reads `sa_dbt/target/manifest.json`, so **that manifest must exist** (run `dbt parse`) before Dagster can load.
    10.3. `assets/constants.py`: secrets from the root `.env` via `python-dotenv` (`STARKE_PRAXIS_PORT`, `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). The DuckDB file comes from `DUCKDB_PATH` in `.env` (absolute path), passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. `config.ini` comes from `CONFIG_FILE_PATH` in `.env` (absolute path). Only `sa_dbt/` is derived from the repo location.
    10.4. Runtime state (server IP, DB name) is stored in root `config.ini` (git-ignored; template: `config.ini.example`). It is not passed between assets.
@@ -70,7 +70,7 @@ uv run pytest sa_dagster/sa_dagster_tests         # tests (currently empty)
 uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single test
 
 # First run / new network: run job `discover_network` (writes server IP + DB name to config.ini)
-# Test run: run job `extract_and_transform` (extraction + dbt staging + core). Don't run `pre_dbt_run` locally (git pull, uv sync, reload).
+# Test run: run job `extract_and_transform` (extraction + dbt staging + core + Superset copy).
 
 # Inspect data read-only (only while Dagster isn't writing)
 .venv/bin/python -c "import duckdb; print(duckdb.connect('duckdb/starke_praxis.duckdb', read_only=True).sql('SELECT ...'))"

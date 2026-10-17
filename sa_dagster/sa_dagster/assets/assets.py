@@ -13,11 +13,6 @@ from .constants import (STARKE_PRAXIS_PORT, STARKE_PRAXIS_USER, STARKE_PRAXIS_PA
                         DUCKDB_PATH, SUPERSET_DUCKDB_PATH)
 from .dbt import dbt_analytics
 
-from dagster_graphql import (
-    DagsterGraphQLClient,
-    ReloadRepositoryLocationInfo
-)
-
 config = configparser.ConfigParser()
 if not config.read(CONFIG_FILE_PATH):
     raise FileNotFoundError(f'Config file not found: {CONFIG_FILE_PATH}')
@@ -51,17 +46,6 @@ def load_starke_table(duckdb: DuckDBResource, table_name: str, query: str) -> No
         conn.register("df_result", df_result)
         # CREATE OR REPLACE is atomic: the old table stays until the new one is ready
         conn.execute(f"CREATE OR REPLACE TABLE raw_starke.{table_name} AS SELECT * FROM df_result;")
-
-
-@asset(group_name="pre_dbt_run")
-def git_pull():
-    os.system('git pull')
-
-
-@asset(deps=[git_pull],
-       group_name="pre_dbt_run")
-def install_requirements():
-    os.system('cd $DAGSTER_HOME/.. && uv sync')
 
 
 @asset(group_name="discover_network")
@@ -493,20 +477,11 @@ def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
     load_starke_table(duckdb, "raw_invoice_line_items", query)
 
 
-@asset(deps=[install_requirements], group_name="pre_dbt_run")
-def parse_dbt() -> None:
-    os.system('cd $DAGSTER_HOME/../sa_dbt && dbt parse')
+# Only core is meant for Superset. The group comes from config.meta.dagster.group in the dbt YAML
+core_assets = [key for key in dbt_analytics.keys if dbt_analytics.group_names_by_key[key] == "core"]
 
 
-@asset(deps=[parse_dbt], group_name="pre_dbt_run")
-def reload_code_location() -> None:
-    client = DagsterGraphQLClient("127.0.0.1", port_number=3000)
-    reload_info: ReloadRepositoryLocationInfo = client.reload_repository_location(
-        "sa_dagster"
-    )
-
-
-@asset(deps=[dbt_analytics], group_name="superset")
+@asset(deps=core_assets, group_name="superset")
 def copy_duckdb_for_superset(duckdb: DuckDBResource) -> None:
     # Superset reads its own copy, because DuckDB allows one writer or several readers, never both
     with duckdb.get_connection() as conn:
