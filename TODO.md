@@ -33,7 +33,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 
 ## Dagster code
 
-13. **There's no extraction job.** The broken sync job was removed. A new job is needed for `extraction_entry_point`, `extract_from_starke` and dbt, plus the 6-hour schedule once everything is verified.
+13. **Job done (2026-10-17), schedule open.** Job `extract_and_transform` selects the groups `extraction_entry_point`, `extract_from_starke`, `staging`, `core` (15 assets). The old job `dbt_run_stg_starke` was removed. Still open: the 6-hour schedule for this job, once the pipeline is verified end-to-end.
 14. **The Superset copy is decided but not built:** copy `starke_praxis.duckdb` after dbt finishes.
 15. **The pre-run assets use `os.system`:** `git_pull`, `install_requirements`, `parse_dbt`. Failures don't fail the run.
 16. **`git_pull` was kept.** Decide whether it's still needed, especially with Docker.
@@ -53,7 +53,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
     28.3. Even `(receipt_id, invoice_recipient_type)` isn't unique: 12 receipts have two `A` invoices.
     28.4. This also explains the existing comment in `fct_accounting_documents`: `--stg_invoices.receipt_id -- this looks to be incorrect`.
     28.5. Option: in `stg_invoices`, use `NULLIF(raw_invoices.REZ_Nr, 0) AS receipt_id` (the same NULLIF pattern as the other columns), and replace `unique` with a `relationships` test to `stg_receipts.receipt_id`.
-29. **Your dbt run only built the 5 staging views.** It reported "Found 8 models", but the 3 core tables (`fct_receipts_to_appointments`, `fct_accounting_documents`, `dim_receipts`) weren't in it. Check which assets/job were selected; for `tag:stg_starke+` to include the core models, the job has to select them as well.
+29. **Probably obsolete (2026-10-17):** the job `dbt_run_stg_starke` was removed (TODO 13); `extract_and_transform` includes the 3 core models. Check on the next run. **Your dbt run only built the 5 staging views.** It reported "Found 8 models", but the 3 core tables (`fct_receipts_to_appointments`, `fct_accounting_documents`, `dim_receipts`) weren't in it. Check which assets/job were selected; for `tag:stg_starke+` to include the core models, the job has to select them as well.
 
 ## Deployment
 

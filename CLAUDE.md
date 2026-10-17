@@ -70,7 +70,7 @@ uv run pytest sa_dagster/sa_dagster_tests         # tests (currently empty)
 uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single test
 
 # First run / new network: run job `discover_network` (writes server IP + DB name to config.ini)
-# Test run: materialize groups `extraction_entry_point` + `extract_from_starke` + dbt assets. Don't run `pre_dbt_run` locally (git pull, uv sync, reload).
+# Test run: run job `extract_and_transform` (extraction + dbt staging + core). Don't run `pre_dbt_run` locally (git pull, uv sync, reload).
 
 # Inspect data read-only (only while Dagster isn't writing)
 .venv/bin/python -c "import duckdb; print(duckdb.connect('duckdb/starke_praxis.duckdb', read_only=True).sql('SELECT ...'))"
