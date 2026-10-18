@@ -33,13 +33,13 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 
 13. **Job done (2026-10-17), schedule open.** Job `extract_and_transform` selects the groups `extraction_entry_point`, `extract_from_starke`, `staging`, `core` (15 assets). The old job `dbt_run_stg_starke` was removed. Still open: the 6-hour schedule for this job, once the pipeline is verified end-to-end.
 14. **Done (2026-10-17):** asset `copy_duckdb_for_superset` (group `superset`, part of `extract_and_transform`) runs after dbt: `CHECKPOINT`, copy to `<target>.tmp`, then atomic `os.replace` to `SUPERSET_DUCKDB_PATH` (`.env`). Locally `duckdb/superset/starke_praxis.duckdb`.
-15. **Done (2026-10-17):** removed the whole `pre_dbt_run` group (`git_pull`, `install_requirements`, `parse_dbt`, `reload_code_location`). A pipeline that updates its own code is an anti-pattern; code updates become a deployment step: build a new image with `uv sync` + `dbt parse`, restart the code-location container (TODO 24). Locally: `uv run dbt parse` by hand, then reload in the UI.
+15. **Done (2026-10-17):** removed the whole `pre_dbt_run` group (`git_pull`, `install_requirements`, `parse_dbt`, `reload_code_location`). A pipeline that updates its own code is an anti-pattern; code updates become a deployment step: build a new image with `uv sync` + `dbt parse`, restart the code-location container (TODO 24). Locally: `dg dev` runs `dbt parse` on every reload (TODO 21).
 16. **Done (2026-10-17):** `git_pull` removed with TODO 15.
 17. **Done (2026-10-17):** `check_server_online_status` raises `Failure` with host, port and the hint to run `discover_network`, so the run is Failed (not Canceled) and downstream assets are skipped. `print()`, `run_launcher.terminate` and the global socket timeout are gone.
 18. **Done (2026-10-17):** `create_duckdb_with_schema` now always creates the schema (the flag is gone, see TODO 10).
 19. **Done and tested (2026-10-17):** the database lookup (now in `find_starke_server`) uses `LIKE 'SP9[_]%'` (a plain `_` is a wildcard), sorts by name, and raises `Failure` unless exactly one Starke database is found across all reachable servers. Test run found `100.88.163.113` (Tailscale peer `Tower`) with `SP9_400502848`.
 20. **Done (2026-10-18):** `get_mssql_engine` builds the URL with `sqlalchemy.URL.create`, which escapes special characters and prints the password as `***`.
-21. **dagster-dbt can rebuild the dbt manifest by itself** (`prepare_if_dev()`). The `parse_dbt` and `reload_code_location` assets are gone (TODO 15), so this is now only about local development: no manual `dbt parse` after model changes.
+21. **Done (2026-10-18):** `dbt_project.prepare_if_dev()` in `project.py` runs `dbt parse` on every code load under `dg dev` (about 2.4 s). No effect in production; there the manifest comes from the image build (TODO 24).
 22. **There are no tests:** `sa_dagster_tests/test_assets.py` is empty.
 
 ## dbt / SQL (later)

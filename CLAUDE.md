@@ -29,7 +29,7 @@ The owner must be able to read and understand every line. Simple beats clever.
    9.4. One Python project for the whole repo: root `pyproject.toml` + `uv.lock` (Python 3.13), venv in root `.venv`. Dagster and dbt share it.
 10. **`sa_dagster/`** – Orchestration. Dagster loads `sa_dagster.sa_dagster` (set in `[tool.dg.project]` in `pyproject.toml`, together with the code location name `sa_dagster`); its `__init__.py` builds the `Definitions` object (assets, jobs, resources). `sa_dagster/` is also `DAGSTER_HOME`: `dagster.yaml` plus the run history Dagster writes there (`history/`, `schedules/`, `storage/`, all git-ignored).
    10.1. `assets/assets.py`: network discovery (`find_starke_server`: takes the online Tailscale peers whose node `ID` is in `allowed_tailscale_node_ids` in `config.ini` (not `HostName`: devices choose that themselves) (from `tailscale status --json`, shared-in peers skipped), checks port 1433, logs in and accepts only exactly one `SP9_` database; writes server + database to `config.ini`. No LAN scan: the Starke login is only sent to allowlisted hosts), extraction of 5 Starke tables into `raw_starke.raw_*`, and the Superset copy (`copy_duckdb_for_superset`). Code updates (git pull, `uv sync`, `dbt parse`) are a deployment step, not assets. Shared helpers: `get_mssql_engine()`, `load_starke_table()`, `save_config()`.
-   10.2. `assets/dbt.py`: one `@dbt_assets` that runs `dbt build`. It reads `sa_dbt/target/manifest.json`, so **that manifest must exist** (run `dbt parse`) before Dagster can load.
+   10.2. `assets/dbt.py`: one `@dbt_assets` that runs `dbt build`. It reads `sa_dbt/target/manifest.json`. Under `dg dev`, `dbt_project.prepare_if_dev()` (`project.py`) runs `dbt parse` on every code load, so after changing models just click "Reload". Outside `dg dev` (production, `dg check defs`) **the manifest must already exist**: in Docker it is built into the image.
    10.3. `assets/constants.py`: secrets from the root `.env` via `python-dotenv` (`STARKE_PRAXIS_PORT`, `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). The DuckDB file comes from `DUCKDB_PATH` in `.env` (absolute path), passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. `config.ini` comes from `CONFIG_FILE_PATH` in `.env` (absolute path). Only `sa_dbt/` is derived from the repo location.
    10.4. Runtime state (Tailscale node ID allowlist, server IP, DB name) is stored in root `config.ini` (git-ignored; template: `config.ini.example`). It is not passed between assets.
    10.5. `jobs/__init__.py`: `discover_network` (run by hand on first setup or a new network) and `extract_and_transform` (extraction + dbt + Superset copy; the planned schedule targets this job). There are no self-updating assets: code updates (`git pull`, `uv sync`, `dbt parse`) are a deployment step (new image).
@@ -59,7 +59,7 @@ The owner must be able to read and understand every line. Simple beats clever.
 uv sync                                    # installs Python 3.13 + all packages into .venv
 
 # dbt (cd sa_dbt)
-uv run dbt parse                                  # (re)generate target/manifest.json – Dagster needs it
+uv run dbt parse                                  # (re)generate target/manifest.json (dg dev does this itself on every load)
 uv run dbt build --target dev                     # run + test everything into schema dbt_dev
 uv run dbt build --target dev --select stg_receipts+   # one model + downstream
 uv run dbt test  --target dev --select stg_invoices    # tests of one model
