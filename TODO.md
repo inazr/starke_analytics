@@ -71,6 +71,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 
 24. **Docker on Unraid:** needs a Dockerfile/compose file, a volume for `DAGSTER_HOME` and the DuckDB file, and the ODBC driver inside the image.
     24.1. **Discovery needs Tailscale in the container:** `find_starke_server` calls `tailscale status --json` and fails without the `tailscale` command. Options: host networking on Unraid with the Tailscale CLI available, Tailscale inside the image, or set the server in `config.ini` by hand and don't run `discover_network`.
+    24.2. **Open question (2026-10-18, skipped for now):** the Starke server node is `Tower` (Linux), Unraid's default host name. If the container runs on `Tower` itself, it reaches SQL Server without Tailscale and the server goes into `config.ini` by hand (option 3 of 24.1).
 25. **`rpi/setup` is obsolete** once Docker is in place.
 26. **Superset's DuckDB driver** must be able to read files written by DuckDB 1.5.
 27. **Merge the branch** `overhaul-uv-latest-versions` into `main` once everything runs.
