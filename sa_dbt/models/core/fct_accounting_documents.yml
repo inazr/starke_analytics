@@ -1,0 +1,78 @@
+version: 2
+
+models:
+  - name: fct_accounting_documents
+    description: >
+      Invoices (Starke RECHNUNG) joined with their line items (RECHNUNGSZEILE).
+      One row per invoice line item, so all invoice columns (invoice_total_gross, partial_payment, deduction, ...)
+      repeat on every line of the same invoice: SUM over invoice columns counts an invoice once per line.
+      Invoices without line items appear once with empty line item columns.
+    config:
+      meta:
+        dagster:
+          group: core
+          asset_key: fct_accounting_documents
+    columns:
+      - name: invoice_id
+        description: Starke ID of the invoice. Not unique in this model (one row per line item).
+      - name: invoice_number
+        description: Invoice number as printed on the invoice. Joins invoices to their line items.
+      - name: is_cancellation
+        description: TRUE if the invoice is a cancellation (cancellation_invoice_number is set).
+      - name: cancellation_invoice_number
+        description: Number of the cancelled invoice. Only set on cancellation invoices (invoice_status S or G).
+      - name: invoice_date
+        description: Date of the invoice.
+      - name: due_date
+        description: Payment due date of the invoice.
+      - name: first_dunning_date
+        description: Date of the first dunning letter (Mahndatum). Starke sometimes skips dunning levels; staging shifts the dates so that the first one is always filled first.
+      - name: second_dunning_date
+        description: Date of the second dunning letter. Empty if there was only one.
+      - name: third_dunning_date
+        description: Date of the third dunning letter. Empty if there were fewer than three.
+      - name: invoice_recipient_type
+        description: >
+          Who receives the invoice. One receipt can get several invoices, one per recipient.
+          Probable meaning (not confirmed): K = Krankenkasse (statutory insurance), Z = Zuzahlung (patient co-payment),
+          P = Privat, A = Ausfallrechnung (missed appointment fee), B = unknown.
+      - name: recipient_name
+        description: Name of the invoice recipient. Hashed (SHA2_512) if the recipient is a person (no IK number), plain text for insurances.
+      - name: invoice_status
+        description: >
+          Starke invoice status (Zustand). Values: B (most invoices), S and G (cancellations), A, X, L.
+          Meaning of the letters is not confirmed.
+      - name: invoice_total_gross
+        description: >
+          Gross total of the whole invoice (RECHNUNG.Betrag). Repeats on every line item of the invoice.
+          How it relates to the line items depends on invoice_recipient_type:
+          K, A and B = sum of line_item_total_gross (K: 1,615 of 1,920 invoices; the rest is unexplained);
+          Z = sum of line_item_total_net, which is line_item_total_gross + supplement, with line_item_total_gross = 0 (403 of 404);
+          P = sum of line_item_total_gross x quantity (Anzahl, not in this model) (776 of 786).
+          own_share never matches.
+      - name: partial_payment
+        description: Partial payment received on the invoice. Empty if none. Repeats on every line item of the invoice.
+      - name: deduction
+        description: Amount deducted from the invoice (Kuerzung), e.g. by the insurance. Repeats on every line item of the invoice.
+      - name: receipt_id
+        description: Receipt (prescription) the line item belongs to. Taken from the line item, because the invoice's own receipt_id is 0 on cancellations.
+      - name: patient_name
+        description: Patient name, hashed (SHA2_512) during extraction.
+      - name: patient_year_of_birth
+        description: Patient's year of birth.
+      - name: patient_age
+        description: Patient's age in the year of the receipt date (year of receipt date minus year of birth).
+      - name: insurance_name
+        description: Name of the patient's insurance. Empty if not set.
+      - name: line_item_total_gross
+        description: >
+          Gross amount of the line item (RECHNUNGSZEILE.Brutto). For P invoices this is the price per unit:
+          multiply by the quantity (Anzahl) to get the invoice amount. On Z invoices it is 0.
+      - name: supplement
+        description: Patient co-payment on the line item (Zuzahlung). On Z invoices this is the amount the patient pays.
+      - name: total_net
+        description: Net amount of the line item (Netto). On Z invoices it equals line_item_total_gross + supplement and sums up to invoice_total_gross.
+      - name: own_share
+        description: Patient's own share on the line item (Eigenanteil). Does not add up to the invoice total for any recipient type.
+      - name: flat_rate
+        description: Flat rate (Pauschale). Stored on every line item, but only counts once per receipt toward the insurance's net amount.
