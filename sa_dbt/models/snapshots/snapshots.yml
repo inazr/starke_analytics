@@ -1,0 +1,13 @@
+version: 2
+
+snapshots:
+  # History of the employees: a new version whenever Starke changes ChangeDate/ChangeTime (e.g. new Arbeitszeit).
+  # The history only exists in the DuckDB file and can't be rebuilt from Starke.
+  - name: snp_employees
+    relation: ref('snp_employees_source')
+    config:
+      schema: snapshots
+      unique_key: Nr
+      strategy: timestamp
+      updated_at: updated_at
+      hard_deletes: invalidate

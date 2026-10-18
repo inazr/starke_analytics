@@ -32,6 +32,10 @@ models:
       +schema: reporting
       +materialized: table
 
+    # Prep models for the snapshots in the same folder (snapshots.yml), not tables of their own
+    snapshots:
+      +materialized: ephemeral
+
     staging:
       starke_praxis:
         +schema: stg_starke

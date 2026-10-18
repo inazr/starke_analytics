@@ -29,6 +29,18 @@ SELECT
         raw_receipts.MIT_Kurzname AS employee_short,
         NULLIF(raw_receipts.KAS_IK, '') AS insurance_ik,
         NULLIF(raw_receipts.KAS_Name, '') AS insurance_name,
+        raw_receipts.PAT_Name AS patient_name, -- hashed during extraction, same hash as on the invoice line items
+        raw_receipts.ARZ_Name AS doctor_name, -- prescribing doctor, hashed during extraction
+        NULLIF(raw_receipts.Diagnosetext, '') AS diagnosis_text,
+        raw_receipts.Heilmittelbereich::INT AS therapy_area,
+        -- Prescribed frequency: FrequenzVon to FrequenzBis sessions per FrequenzEinheit (W = week); 0 = not set
+        NULLIF(raw_receipts.FrequenzVon, 0) AS frequency_min,
+        NULLIF(raw_receipts.FrequenzBis, 0) AS frequency_max,
+        NULLIF(raw_receipts.FrequenzEinheit, '') AS frequency_unit,
+        -- Starke's own checks of the prescription rules
+        raw_receipts.FristOK::BOOLEAN AS is_deadline_ok,
+        raw_receipts.BeginnOK::BOOLEAN AS is_start_ok,
+        raw_receipts.Dringlich::BOOLEAN AS is_urgent,
         DATE '1801-01-01' + to_days(raw_receipts.ChangeDate::INT) AS updated_at,
 
 FROM

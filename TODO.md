@@ -85,6 +85,15 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
     35.3. Decide whether the CSV goes into git: it holds monthly salary per employee short code (sensitive). Alternatives: keep it git-ignored and mount it into the container as a volume.
     35.4. The seed only becomes useful once a core model `ref('employee_payments')`s it (e.g. salary vs. revenue per employee).
 
+36. **Doctor identifiers are extracted unhashed into `raw_starke.raw_receipts`** (found 2026-10-18). `ARZ_LANR` (the doctor's lifelong ID number, 288 distinct values) is copied as plain text, and `ARZ_Nummer` holds a first name ("Angela", 3 rows). CLAUDE.md 13 only hashes `ARZ_Name`. Neither column is staged, so they don't reach `core` or Superset; core uses the hashed `doctor_name` instead.
+    36.1. Option: hash `ARZ_LANR` in the extraction query like `ARZ_Name`, and drop `ARZ_Nummer` (empty or junk on all but 15 rows).
+    36.2. Option: accept, because raw never leaves the pipeline's DuckDB file.
+
+37. **`raw_employees` extracts employee secrets unhashed** (found 2026-10-18): `Passwort` (Starke login password), `Kontonummer`, `BLZ`, `Kreditinstitut`, `Geburtsdatum`, `Notiz`. No model uses the password or bank columns. The snapshot `snp_employees` keeps only the columns the owner chose (including `Geburtsdatum`), so the secrets have no history, but they sit in `raw_starke.raw_employees` in plain text.
+    37.1. Option: remove `Passwort`, `Kontonummer`, `BLZ`, `Kreditinstitut` (and `Notiz`) from the extraction query in `raw_employees` (`assets.py`).
+    37.2. Option: hash them like the patient columns (CLAUDE.md 13).
+    37.3. Option: accept.
+
 ## Deployment
 
 24. **Docker on Unraid:** needs a Dockerfile/compose file, a volume for `DAGSTER_HOME` and the DuckDB file, and the ODBC driver inside the image.

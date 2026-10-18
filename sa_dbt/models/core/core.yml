@@ -12,3 +12,28 @@ models:
       meta:
         dagster:
           asset_key: dim_receipts
+
+  - name: dim_employees
+    config:
+      meta:
+        dagster:
+          asset_key: dim_employees
+    description: >
+      One row per employee version (history from the snapshot snp_employees, starting with its first run).
+      For the hours in a given month, join on valid_from <= date AND (valid_to > date OR valid_to IS NULL).
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "employee_id || '-' || valid_from"
+    columns:
+      - name: employee_id
+        data_tests:
+          - not_null
+      - name: weekly_working_hours
+        description: Contracted hours per week (Starke Arbeitszeit). Empty for 5 of 13 employees.
+      - name: valid_from
+        description: When this version became valid (Starke ChangeDate + ChangeTime).
+      - name: valid_to
+        description: When the next version replaced it, or the employee was deleted in Starke. Empty for the current version.
+      - name: is_current
+        description: TRUE for the current version of the employee.

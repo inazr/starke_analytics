@@ -2,10 +2,13 @@ version: 2
 
 models:
   - name: stg_employees
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "employee_id || '-' || valid_from"
     columns:
       - name: employee_id
         data_tests:
-          - unique
           - not_null
 
   - name: stg_appointments

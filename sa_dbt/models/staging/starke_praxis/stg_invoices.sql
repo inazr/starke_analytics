@@ -32,6 +32,8 @@ SELECT
         raw_invoices.MwSt::DECIMAL(10, 4) AS total_vat,
         NULLIF(raw_invoices.Teilzahlung, 0)::DECIMAL(10, 4) AS partial_payment,
         raw_invoices.Kuerzung::DECIMAL(10, 4) AS deduction,
+        NULLIF(raw_invoices.Abschreibung, 0)::DECIMAL(10, 4) AS write_off,
+        DATE '1801-01-01' + to_days(NULLIF(raw_invoices.Abschreibungsdatum, 0)::INT) AS write_off_date,
 FROM
         {{ source('starke_praxis', 'raw_invoices') }}
 

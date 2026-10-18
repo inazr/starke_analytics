@@ -45,6 +45,7 @@ The owner must be able to read and understand every line. Simple beats clever.
    11.5. dbt behaviour flags live under `flags:` in `dbt_project.yml`, not in `profiles.yml`.
    11.6. `models/reporting/`: `rep_*` tables on top of core for Superset (e.g. `rep_employee_stats`), schema `reporting`, copied to Superset together with `core`.
    11.7. `models/staging/seeds/`: `stg_*` models over the hand-maintained CSV seeds in `seeds/` (e.g. `employee_payments` → `stg_employee_payments`), schema `stg_seeds`.
+   11.8. `models/snapshots/`: YAML snapshots (`snapshots.yml`, not the `snapshots/` folder) between raw and staging, schema `snapshots`. `snp_employees` keeps the history of `raw_employees` (timestamp strategy on `ChangeDate` + `ChangeTime`, which counts hundredths of a second); `stg_employees` and `dim_employees` have one row per version (`valid_from`, `valid_to`, `is_current`). The `.sql` files in this folder are ephemeral prep models, because `updated_at` takes a column name, not an expression. **The history only exists in the DuckDB file**: it can't be rebuilt from Starke, so never delete the file or the `snapshots` schema.
 
 ### Domain quirks
 
@@ -91,7 +92,7 @@ uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single t
 19. Layers: `source` → `stg_` (1:1 with a source table, rename/cast only, no joins) → `fct_`/`dim_` in `core` (joins, business logic). Add an `intermediate/` layer only when a core model gets too complex.
 20. Always use `{{ ref() }}` / `{{ source() }}`. Never hard-code schema names inside models.
 21. Every model's primary key gets `unique` + `not_null` under `data_tests:` (not the old `tests:` key). Use `severity: warn` for known data issues.
-22. Dagster groups for dbt come from `LayerGroupTranslator` in `assets/dbt.py`: the folder under `models/` (`staging`, `core`, `reporting`), seeds go into `seeds`. Don't set `meta.dagster.group` in the YAML. Not via `+meta` in `dbt_project.yml`: dbt replaces the whole `meta.dagster` dict of a model that sets its own (e.g. `asset_key`). Every new source table needs `meta.dagster.asset_key` matching its Python asset name.
+22. Dagster groups for dbt come from `LayerGroupTranslator` in `assets/dbt.py`: the folder under `models/` (`snapshots`, `staging`, `core`, `reporting`), seeds go into `seeds`. Don't set `meta.dagster.group` in the YAML. Not via `+meta` in `dbt_project.yml`: dbt replaces the whole `meta.dagster` dict of a model that sets its own (e.g. `asset_key`). Every new source table needs `meta.dagster.asset_key` matching its Python asset name.
 23. Match the existing SQL style: UPPERCASE keywords, columns qualified with the table name (`stg_receipts.receipt_id`), `WHERE 1=1`, `AS` for every alias, booleans named `is_*`.
 24. If the Starke date conversion has to be written again, use a single macro (DRY) instead of copying the expression.
 

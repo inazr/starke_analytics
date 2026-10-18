@@ -1,13 +1,16 @@
+-- One row per employee version (snapshot snp_employees)
 SELECT
-        raw_employees.Nr AS employee_id,
-        raw_employees.Kurzname AS employee_short,
-        raw_employees.Name AS employee_name,
-        raw_employees.Nachname AS employee_lastname,
-        NULLIF(raw_employees.Vorname, '') AS employee_firstname,
-        NULLIF(raw_employees.Geschlecht, '') AS employee_sex,
-        raw_employees.Ausgeschieden::BOOLEAN AS employee_dismissed,
-        DATE '1801-01-01' + to_days(raw_employees.ChangeDate::INT) AS updated_at,
+        snp_employees.Nr AS employee_id,
+        snp_employees.Kurzname AS employee_short,
+        snp_employees.Name AS employee_name,
+        NULLIF(snp_employees.Geschlecht, '') AS employee_sex,
+        snp_employees.Ausgeschieden::BOOLEAN AS employee_dismissed,
+        NULLIF(snp_employees.Arbeitszeit, '')::INT AS weekly_working_hours, -- Sollzeit is always empty, Arbeitszeit holds the hours
+        snp_employees.updated_at,
+        snp_employees.dbt_valid_from AS valid_from,
+        snp_employees.dbt_valid_to AS valid_to,
+        snp_employees.dbt_valid_to IS NULL AS is_current,
 FROM
-        {{ source('starke_praxis', 'raw_employees') }}
+        {{ ref('snp_employees') }}
 
 WHERE   1=1

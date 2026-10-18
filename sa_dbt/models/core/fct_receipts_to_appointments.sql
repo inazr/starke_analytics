@@ -26,6 +26,18 @@ SELECT
         stg_receipts.net_amount AS receipt_net_value,
         stg_receipts.supplementary_payment AS receipt_supplementary_value,
         stg_receipts.flat_rate AS receipt_flat_rate,
+        stg_receipts.cancellation AS receipt_cancellation_value,
+        stg_receipts.kilometers,
+        stg_receipts.patient_name,
+        stg_receipts.doctor_name,
+        stg_receipts.diagnosis_text,
+        stg_receipts.therapy_area,
+        stg_receipts.frequency_min,
+        stg_receipts.frequency_max,
+        stg_receipts.frequency_unit,
+        stg_receipts.is_deadline_ok,
+        stg_receipts.is_start_ok,
+        stg_receipts.is_urgent,
 FROM
         {{ ref('stg_receipts') }}
 

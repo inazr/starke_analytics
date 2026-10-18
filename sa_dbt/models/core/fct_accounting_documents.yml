@@ -53,6 +53,14 @@ models:
         description: Partial payment received on the invoice. Empty if none. Repeats on every line item of the invoice.
       - name: deduction
         description: Amount deducted from the invoice (Kuerzung), e.g. by the insurance. Repeats on every line item of the invoice.
+      - name: write_off
+        description: Amount written off as uncollectable (Abschreibung). Empty if none. Repeats on every line item of the invoice.
+      - name: write_off_date
+        description: Date of the write-off (Abschreibungsdatum).
+      - name: invoice_incoming_date
+        description: >
+          Starke Eingangsdatum of the invoice. Not confirmed whether this is the payment date:
+          it is filled for every invoice with status B, including dunned ones.
       - name: receipt_id
         description: Receipt (prescription) the line item belongs to. Taken from the line item, because the invoice's own receipt_id is 0 on cancellations.
       - name: patient_name
@@ -63,6 +71,10 @@ models:
         description: Patient's age in the year of the receipt date (year of receipt date minus year of birth).
       - name: insurance_name
         description: Name of the patient's insurance. Empty if not set.
+      - name: tariff_name
+        description: Price list the line item was billed with (e.g. vdek, RVO, Beihilfe, Privat ab 1/25).
+      - name: diagnosis
+        description: Diagnosis on the line item. Empty on most line items.
       - name: line_item_total_gross
         description: >
           Gross amount of the line item (RECHNUNGSZEILE.Brutto). For P invoices this is the price per unit:
