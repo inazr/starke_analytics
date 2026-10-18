@@ -13,6 +13,13 @@
       }
     ]
   },
+  "sandbox": {
+    "enabled": true,
+    "filesystem": {
+      "denyRead": ["./.env"],
+      "allowWrite": ["~/.cache/uv"]
+    }
+  },
   "autoMode": {
     "hard_deny": [
       "$defaults",

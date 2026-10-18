@@ -26,14 +26,15 @@ The owner must be able to read and understand every line. Simple beats clever.
 
 9. ELT pipeline for a physiotherapy practice:
    `Starke Praxis (MSSQL, LAN) → Dagster assets (pandas) → DuckDB raw_starke.* → dbt → DuckDB stg_starke.* / core.* → Superset`
-   9.1. **Superset** (separate, not in this repo) reads its **own copy** of `duckdb/starke_praxis.duckdb`. The asset `copy_duckdb_for_superset` builds a new DuckDB file at `SUPERSET_DUCKDB_PATH` (`.env`) after dbt finishes, so Superset never opens the file Dagster writes to. The copy holds only the `core` schema: every table in `core`, so new core models are included automatically.
+   9.1. **Superset** (separate, not in this repo) reads its **own copy** of `duckdb/starke_praxis.duckdb`. The asset `copy_duckdb_for_superset` builds a new DuckDB file at `SUPERSET_DUCKDB_PATH` (`settings.env`) after dbt finishes, so Superset never opens the file Dagster writes to. The copy holds only the `core` schema: every table in `core`, so new core models are included automatically.
    9.2. **Target platform: Docker on Unraid.** `rpi/setup` is the old Raspberry Pi setup.
    9.3. **Planned:** a Dagster job that extracts every 6 hours. Add it only after the pipeline is verified end-to-end.
    9.4. One Python project for the whole repo: root `pyproject.toml` + `uv.lock` (Python 3.13), venv in root `.venv`. Dagster and dbt share it.
 10. **`sa_dagster/`** – Orchestration. Dagster loads `sa_dagster.sa_dagster` (set in `[tool.dg.project]` in `pyproject.toml`, together with the code location name `sa_dagster`); its `__init__.py` builds the `Definitions` object (assets, jobs, resources). `sa_dagster/` is also `DAGSTER_HOME`: `dagster.yaml` plus the run history Dagster writes there (`history/`, `schedules/`, `storage/`, all git-ignored).
    10.1. `assets/assets.py`: network discovery (`find_starke_server`: takes the online Tailscale peers whose node `ID` is in `allowed_tailscale_node_ids` in `config.ini` (not `HostName`: devices choose that themselves) (from `tailscale status --json`, shared-in peers skipped), checks port 1433, logs in and accepts only exactly one `SP9_` database; writes server + database to `config.ini`. No LAN scan: the Starke login is only sent to allowlisted hosts), extraction of 5 Starke tables into `raw_starke.raw_*`, and the Superset copy (`copy_duckdb_for_superset`). Code updates (git pull, `uv sync`, `dbt parse`) are a deployment step, not assets. Shared helpers: `get_mssql_engine()`, `load_starke_table()`, `save_config()`.
    10.2. `assets/dbt.py`: one `@dbt_assets` that runs `dbt build`. It reads `sa_dbt/target/manifest.json`. Under `dg dev`, `dbt_project.prepare_if_dev()` (`project.py`) runs `dbt parse` on every code load, so after changing models just click "Reload". Outside `dg dev` (production, `dg check defs`) **the manifest must already exist**: in Docker it is built into the image.
-   10.3. `assets/constants.py`: secrets from the root `.env` via `python-dotenv` (`STARKE_PRAXIS_PORT`, `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). The DuckDB file comes from `DUCKDB_PATH` in `.env` (absolute path), passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. `config.ini` comes from `CONFIG_FILE_PATH` in `.env` (absolute path). Only `sa_dbt/` is derived from the repo location.
+   10.3. `assets/constants.py` loads two git-ignored files from the repo root via `python-dotenv`: `settings.env` (no secrets: `STARKE_PRAXIS_PORT`, `CONFIG_FILE_PATH`, `DUCKDB_PATH`, `SUPERSET_DUCKDB_PATH`, all paths absolute) and `.env` (only the Starke login: `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). Templates: `settings.env.example`, `.env.example`. `DUCKDB_PATH` is passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. Only `sa_dbt/` is derived from the repo location.
+   10.6. **Claude's Bash runs in the Claude Code sandbox** (`.claude/settings.json`): `.env` is unreadable for Claude (`denyRead`), `~/.cache/uv` is writable for `uv run`. Everything Claude needs for dbt and `dg check defs` is in `settings.env`.
    10.4. Runtime state (Tailscale node ID allowlist, server IP, DB name) is stored in root `config.ini` (git-ignored; template: `config.ini.example`). It is not passed between assets.
    10.5. `jobs/__init__.py`: `discover_network` (run by hand on first setup or a new network) and `extract_and_transform` (extraction + dbt + Superset copy; the planned schedule targets this job). There are no self-updating assets: code updates (`git pull`, `uv sync`, `dbt parse`) are a deployment step (new image).
 11. **`sa_dbt/`** – Transformations on DuckDB (`duckdb/starke_praxis.duckdb`).
@@ -55,20 +56,20 @@ The owner must be able to read and understand every line. Simple beats clever.
 
 16. Dependencies are managed with **uv** in the repo root. Add a package with `uv add <pkg>` (never `pip install`) and commit `uv.lock`.
 17. The dbt profile lives in `sa_dbt/profiles.yml`, so run dbt **from inside `sa_dbt/`**. The default target is **`prod`**: pass `--target dev` while developing.
-18. Never print `.env`: it holds the Starke credentials. In ad-hoc scripts use `load_dotenv('.env')`, because plain `load_dotenv()` fails in stdin scripts.
+18. Never print `.env`: it holds the Starke credentials (Claude can't read it anyway, see 10.6). In ad-hoc scripts use `load_dotenv('settings.env')`, because plain `load_dotenv()` fails in stdin scripts. dbt loads only the nearest `.env` by itself, so pass `settings.env` with `uv run --env-file ../settings.env dbt ...`.
 
 ```bash
 # Setup (repo root)
 uv sync                                    # installs Python 3.13 + all packages into .venv
 
-# dbt (cd sa_dbt)
-uv run dbt parse                                  # (re)generate target/manifest.json (dg dev does this itself on every load)
-uv run dbt build --target dev                     # run + test everything into schema dbt_dev
-uv run dbt build --target dev --select stg_receipts+   # one model + downstream
-uv run dbt test  --target dev --select stg_invoices    # tests of one model
-uv run dbt show  --target dev --select dim_receipts --limit 10
+# dbt (cd sa_dbt; --env-file because DUCKDB_PATH is in settings.env, see 18)
+uv run --env-file ../settings.env dbt parse              # (re)generate target/manifest.json (dg dev does this itself on every load)
+uv run --env-file ../settings.env dbt build --target dev # run + test everything into schema dbt_dev
+uv run --env-file ../settings.env dbt build --target dev --select stg_receipts+   # one model + downstream
+uv run --env-file ../settings.env dbt test  --target dev --select stg_invoices    # tests of one model
+uv run --env-file ../settings.env dbt show  --target dev --select dim_receipts --limit 10
 
-# Dagster (repo root; needs a .env with the variables in 10.3 and DAGSTER_HOME=<repo>/sa_dagster)
+# Dagster (repo root; needs settings.env + .env with the variables in 10.3 and DAGSTER_HOME=<repo>/sa_dagster)
 ./dagster_dev_startup.sh                          # sets DAGSTER_HOME + uv run dg dev, UI on http://localhost:3000
 uv run dg check defs --no-check-yaml              # check that all definitions load
 uv run pytest sa_dagster/sa_dagster_tests         # tests (currently empty)
@@ -103,7 +104,7 @@ uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single t
    28.2. `dg dev` and `dg check defs` need `--no-check-yaml`: without it `dg` demands a components `defs/` folder, which this project doesn't use.
 29. Jobs select assets by group name (`AssetSelection.groups(...)`), so a renamed group silently empties a job. Check `jobs/__init__.py` when you change groups.
 30. Schedules and sensors only run once they are added to `Definitions(...)`.
-   30.1. Test one asset in-process: `load_dotenv('.env')`, then `dagster.materialize([asset], resources={...})`. Changing `assets.config` in such a test stays in memory unless `save_config()` runs.
+   30.1. Test one asset in-process: `load_dotenv('settings.env')`, then `dagster.materialize([asset], resources={...})`. Changing `assets.config` in such a test stays in memory unless `save_config()` runs.
    30.2. Run history (read-only via Python `sqlite3` with `file:...?mode=ro`, the `sqlite3` CLI can't open it here): runs in `sa_dagster/history/runs.db`, latest materialization per asset in `sa_dagster/history/runs/index.db` table `asset_keys`. If the UI still shows "Materializing…" after a successful run, the browser tab is stale: reload it.
    30.3. A test `dg dev` on another port starts 4 processes (webserver, daemon, code-server, `api grpc`). Stop all of them afterwards.
 

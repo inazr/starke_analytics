@@ -74,6 +74,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
     33.2. Fail-open: if `jq` fails, `command` is empty and the hook allows. `onFailure: block` covers a crash but not this. Option: exit 2 when `jq` fails or returns nothing.
     33.3. Self-modifiable: Claude could edit `.claude/settings.json` or the hook script. Options: `permissions.deny` for `Edit(.claude/**)`; or move the hook to user-level settings (`~/.claude/settings.json`), which the project can't override.
     33.4. False positives: the hook also blocks harmless commands whose text contains the patterns (e.g. an edit script writing "1433" into `TODO.md`). Workaround: use the Edit tool.
+    33.5. **Done (2026-10-18):** Claude Code sandbox on (`.claude/settings.json`): `.env` is unreadable for Claude's Bash (`denyRead`), so Claude can't get the Starke password. Non-secret variables moved to a new `settings.env` (port and paths), which `constants.py` and dbt (`--env-file`) read. Side effect: the sandbox also blocks Bash writes to `.claude/settings.json` and `.claude/hooks/` (partly covers 33.3; the Edit tool can still change them). 33.1–33.4 are still open.
 
 ## Deployment
 
