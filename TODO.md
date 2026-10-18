@@ -33,7 +33,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 
 ## Dagster code
 
-13. **Job done (2026-10-17), schedule open.** Job `extract_and_transform` selects the groups `extraction_entry_point`, `extract_from_starke`, `staging`, `core` (15 assets). The old job `dbt_run_stg_starke` was removed. Still open: the 6-hour schedule for this job, once the pipeline is verified end-to-end.
+13. **Done (2026-10-18):** job `extract_and_transform` (2026-10-17) and schedule `extract_and_transform_schedule` (`schedules/__init__.py`): every 4 hours (`0 */4 * * *`, Europe/Berlin), on by default. The owner chose 4 hours instead of the planned 6. The old job `dbt_run_stg_starke` was removed.
 14. **Done (2026-10-17):** asset `copy_duckdb_for_superset` (group `superset`, part of `extract_and_transform`) runs after dbt: `CHECKPOINT`, copy to `<target>.tmp`, then atomic `os.replace` to `SUPERSET_DUCKDB_PATH` (`.env`). Locally `duckdb/superset/starke_praxis.duckdb`.
 15. **Done (2026-10-17):** removed the whole `pre_dbt_run` group (`git_pull`, `install_requirements`, `parse_dbt`, `reload_code_location`). A pipeline that updates its own code is an anti-pattern; code updates become a deployment step: build a new image with `uv sync` + `dbt parse`, restart the code-location container (TODO 24). Locally: `dg dev` runs `dbt parse` on every reload (TODO 21).
 16. **Done (2026-10-17):** `git_pull` removed with TODO 15.
