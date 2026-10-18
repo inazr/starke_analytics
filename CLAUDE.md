@@ -18,6 +18,9 @@ The owner must be able to read and understand every line. Simple beats clever.
 7. **Never fix anything on your own that is a design decision.** Diagnose (read-only checks are fine), write the finding into `TODO.md` with options, and only change what the owner explicitly names.
 8. One topic at a time, and be specific: give the full name and path ("Microsoft ODBC Driver 18 for SQL Server, `/opt/homebrew/lib/libmsodbcsql.18.dylib`"), not "the driver".
    8.1. **Keep answers short.** Answer the question asked in a few sentences first. No long background, no repeated context, no extra sections.
+   8.2. **After a change, report only what the owner needs:** decisions to make, failures, surprises, or something the owner must do. No list of routine edits (docs updated, TODO marked done, validation passed).
+   8.3. **TODO rounds:** start the reply header with `TODO n/total` (total = highest number in `TODO.md`, e.g. `TODO 21/32`). When a TODO is finished, update `TODO.md`/CLAUDE.md and **commit automatically** (one commit per TODO).
+   8.4. **Automated security review findings** (background notices after a commit) go into `TODO.md` as a new item with options; they are design decisions, not auto-fixes.
 
 ## Architecture
 

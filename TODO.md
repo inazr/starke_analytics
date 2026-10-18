@@ -2,6 +2,8 @@
 
 Collected while getting the pipeline to run. Nothing here gets fixed until you pick an item.
 
+**Status (2026-10-18):** next item is TODO 22. Still open: 1 (OpenSSL workaround, local only), 4 (slow timeout on wrong login/database), 13 (6-hour schedule), 22, 23, 28, 30, 24–27 (deployment). The pipeline runs end-to-end locally: `discover_network` finds `Tower` via Tailscale, `extract_and_transform` builds raw → staging → core → Superset copy.
+
 ## Blocking the test run (found in the logs)
 
 1. **"Microsoft ODBC Driver 18 for SQL Server" can't load OpenSSL 3.** This is the Homebrew package `msodbcsql18`, file `/opt/homebrew/lib/libmsodbcsql.18.dylib`. It's what lets Python talk to the Starke SQL Server: `sqlalchemy` → `pyodbc` → this driver → SQL Server. For the encrypted login it loads OpenSSL at runtime (`libssl.3.dylib` / `libcrypto.3.dylib` in `/opt/homebrew/lib`).
