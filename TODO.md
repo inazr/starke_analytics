@@ -42,7 +42,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 19. **Done and tested (2026-10-17):** the database lookup (now in `find_starke_server`) uses `LIKE 'SP9[_]%'` (a plain `_` is a wildcard), sorts by name, and raises `Failure` unless exactly one Starke database is found across all reachable servers. Test run found `100.88.163.113` (Tailscale peer `Tower`) with `SP9_400502848`.
 20. **Done (2026-10-18):** `get_mssql_engine` builds the URL with `sqlalchemy.URL.create`, which escapes special characters and prints the password as `***`.
 21. **Done (2026-10-18):** `dbt_project.prepare_if_dev()` in `project.py` runs `dbt parse` on every code load under `dg dev` (about 2.4 s). No effect in production; there the manifest comes from the image build (TODO 24).
-22. **There are no tests:** `sa_dagster_tests/test_assets.py` is empty.
+22. **There are no tests:** `sa_dagster_tests/test_assets.py` is empty. **Decided (2026-10-18): no tests for now.** Options if revisited: definitions load + jobs non-empty, Tailscale allowlist filter, "exactly one SP9_ database" rule, `load_starke_table` with a temp DuckDB. Importing `assets.py` needs `config.ini` + `.env`.
 
 ## dbt / SQL (later)
 
