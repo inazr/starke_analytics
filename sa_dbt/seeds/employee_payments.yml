@@ -1,0 +1,25 @@
+version: 2
+
+seeds:
+  - name: employee_payments
+    description: Actual monthly salary per employee, maintained by hand as a CSV. One row per month and employee.
+    config:
+      column_types:
+        month: DATE
+        employee_short: VARCHAR
+        actual_salary: NUMERIC(10,4)
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "month || '-' || employee_short"
+    columns:
+      - name: month
+        description: First day of the month the salary was paid for.
+        data_tests:
+          - not_null
+      - name: employee_short
+        description: Employee short code (as in Starke).
+        data_tests:
+          - not_null
+      - name: actual_salary
+        description: Salary actually paid in that month.

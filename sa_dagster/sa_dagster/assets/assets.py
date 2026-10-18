@@ -488,14 +488,16 @@ def raw_invoice_line_items(duckdb: DuckDBResource) -> None:
     load_starke_table(duckdb, "raw_invoice_line_items", query)
 
 
-# Only core is meant for Superset. The group comes from config.meta.dagster.group in the dbt YAML
-core_assets = [key for key in dbt_analytics.keys if dbt_analytics.group_names_by_key[key] == "core"]
+# Superset only gets these layers. Each is a dbt folder, a Dagster group (assets/dbt.py) and a DuckDB schema.
+SUPERSET_SCHEMAS = ["core", "reporting"]
+superset_assets = [key for key in dbt_analytics.keys if dbt_analytics.group_names_by_key[key] in SUPERSET_SCHEMAS]
 
 
-@asset(deps=core_assets, group_name="superset")
+# deps only draw the lineage: the sensor in sensors/__init__.py starts this copy after a successful dbt run
+@asset(deps=superset_assets, group_name="superset")
 def copy_duckdb_for_superset(duckdb: DuckDBResource) -> None:
     # Superset reads its own copy, because DuckDB allows one writer or several readers, never both.
-    # The copy only holds core: raw_starke and stg_starke are not meant for Superset.
+    # The copy only holds SUPERSET_SCHEMAS: raw_starke and stg_starke are not meant for Superset.
     os.makedirs(os.path.dirname(SUPERSET_DUCKDB_PATH), exist_ok=True)
     tmp_path = SUPERSET_DUCKDB_PATH + '.tmp'
     if os.path.exists(tmp_path):
@@ -503,18 +505,19 @@ def copy_duckdb_for_superset(duckdb: DuckDBResource) -> None:
 
     with duckdb.get_connection() as conn:
         conn.execute(f"ATTACH '{tmp_path}' AS superset_copy;")
-        conn.execute("CREATE SCHEMA superset_copy.core;")
-        # Every table in core, so a new core model is copied without changing this code
-        core_tables = conn.execute("""
-                                   SELECT tables.table_name
-                                   FROM   information_schema.tables AS tables
-                                   WHERE  1=1
-                                     AND  tables.table_catalog = current_database()
-                                     AND  tables.table_schema = 'core'
-                                   ;
-                                   """).fetchall()
-        for (table_name,) in core_tables:
-            conn.execute(f'CREATE TABLE superset_copy.core."{table_name}" AS SELECT * FROM core."{table_name}";')
+        for schema in SUPERSET_SCHEMAS:
+            conn.execute(f"CREATE SCHEMA superset_copy.{schema};")
+            # Every table in the schema, so a new model is copied without changing this code
+            tables = conn.execute("""
+                                  SELECT tables.table_name
+                                  FROM   information_schema.tables AS tables
+                                  WHERE  1=1
+                                    AND  tables.table_catalog = current_database()
+                                    AND  tables.table_schema = ?
+                                  ;
+                                  """, [schema]).fetchall()
+            for (table_name,) in tables:
+                conn.execute(f'CREATE TABLE superset_copy.{schema}."{table_name}" AS SELECT * FROM {schema}."{table_name}";')
         # DETACH writes everything into the file, so no .wal file is left behind
         conn.execute("DETACH superset_copy;")
 

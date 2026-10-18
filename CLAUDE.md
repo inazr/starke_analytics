@@ -26,7 +26,7 @@ The owner must be able to read and understand every line. Simple beats clever.
 
 9. ELT pipeline for a physiotherapy practice:
    `Starke Praxis (MSSQL, LAN) → Dagster assets (pandas) → DuckDB raw_starke.* → dbt → DuckDB stg_starke.* / core.* → Superset`
-   9.1. **Superset** (separate, not in this repo) reads its **own copy** of `duckdb/starke_praxis.duckdb`. The asset `copy_duckdb_for_superset` builds a new DuckDB file at `SUPERSET_DUCKDB_PATH` (`settings.env`) after dbt finishes, so Superset never opens the file Dagster writes to. The copy holds only the `core` schema: every table in `core`, so new core models are included automatically.
+   9.1. **Superset** (separate, not in this repo) reads its **own copy** of `duckdb/starke_praxis.duckdb`. The asset `copy_duckdb_for_superset` builds a new DuckDB file at `SUPERSET_DUCKDB_PATH` (`settings.env`) after dbt finishes, so Superset never opens the file Dagster writes to. The copy holds only the schemas in `SUPERSET_SCHEMAS` (`core`, `reporting`, in `assets.py`): every table in them, so new models are included automatically.
    9.2. **Target platform: Docker on Unraid.** `rpi/setup` is the old Raspberry Pi setup.
    9.3. **Planned:** a Dagster job that extracts every 6 hours. Add it only after the pipeline is verified end-to-end.
    9.4. One Python project for the whole repo: root `pyproject.toml` + `uv.lock` (Python 3.13), venv in root `.venv`. Dagster and dbt share it.
@@ -36,13 +36,14 @@ The owner must be able to read and understand every line. Simple beats clever.
    10.3. `assets/constants.py` loads two git-ignored files from the repo root via `python-dotenv`: `settings.env` (no secrets: `STARKE_PRAXIS_PORT`, `CONFIG_FILE_PATH`, `DUCKDB_PATH`, `SUPERSET_DUCKDB_PATH`, all paths absolute) and `.env` (only the Starke login: `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). Templates: `settings.env.example`, `.env.example`. `DUCKDB_PATH` is passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. Only `sa_dbt/` is derived from the repo location.
    10.6. **Claude's Bash runs in the Claude Code sandbox** (`.claude/settings.json`): `.env` is unreadable for Claude (`denyRead`), `~/.cache/uv` is writable for `uv run`. Everything Claude needs for dbt and `dg check defs` is in `settings.env`.
    10.4. Runtime state (Tailscale node ID allowlist, server IP, DB name) is stored in root `config.ini` (git-ignored; template: `config.ini.example`). It is not passed between assets.
-   10.5. `jobs/__init__.py`: `discover_network` (run by hand on first setup or a new network) and `extract_and_transform` (extraction + dbt + Superset copy; the planned schedule targets this job). There are no self-updating assets: code updates (`git pull`, `uv sync`, `dbt parse`) are a deployment step (new image).
+   10.5. `jobs/__init__.py`: `discover_network` (run by hand on first setup or a new network), `extract_and_transform` (extraction + dbt; the planned schedule targets this job) and `copy_for_superset` (only the Superset copy). The run status sensor `copy_for_superset_after_dbt` (`sensors/__init__.py`) starts `copy_for_superset` after every successful run that included dbt assets (job or manual materialize). There are no self-updating assets: code updates (`git pull`, `uv sync`, `dbt parse`) are a deployment step (new image).
 11. **`sa_dbt/`** – Transformations on DuckDB (`duckdb/starke_praxis.duckdb`).
    11.1. `models/source/starke_praxis.yml`: sources with `meta.dagster.asset_key` matching the Python asset names. This is what links Python and dbt lineage in Dagster.
    11.2. `models/staging/starke_praxis/stg_*.sql`: rename German source columns to English snake_case, cast types, and convert Starke dates.
    11.3. `models/core/`: `fct_*` / `dim_*` tables (materialized as `table`).
    11.4. `macros/generate_schema_name.sql`: on target `prod`, models go to their custom schema (`stg_starke`, `core`). On any other target, **everything goes into the target schema** (`dbt_dev`).
    11.5. dbt behaviour flags live under `flags:` in `dbt_project.yml`, not in `profiles.yml`.
+   11.6. `models/reporting/` (planned, empty): models on top of core for Superset, schema `reporting`, copied to Superset together with `core`.
 
 ### Domain quirks
 
@@ -76,7 +77,7 @@ uv run pytest sa_dagster/sa_dagster_tests         # tests (currently empty)
 uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single test
 
 # First run / new network: run job `discover_network` (writes server IP + DB name to config.ini)
-# Test run: run job `extract_and_transform` (extraction + dbt staging + core + Superset copy).
+# Test run: run job `extract_and_transform` (extraction + dbt); the sensor then starts job `copy_for_superset`.
 
 # Inspect data read-only (only while Dagster isn't writing)
 .venv/bin/python -c "import duckdb; print(duckdb.connect('duckdb/starke_praxis.duckdb', read_only=True).sql('SELECT ...'))"
@@ -89,14 +90,14 @@ uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single t
 19. Layers: `source` → `stg_` (1:1 with a source table, rename/cast only, no joins) → `fct_`/`dim_` in `core` (joins, business logic). Add an `intermediate/` layer only when a core model gets too complex.
 20. Always use `{{ ref() }}` / `{{ source() }}`. Never hard-code schema names inside models.
 21. Every model's primary key gets `unique` + `not_null` under `data_tests:` (not the old `tests:` key). Use `severity: warn` for known data issues.
-22. Every new model needs a YAML entry with `config.meta.dagster.group`. Every new source table needs `meta.dagster.asset_key` matching its Python asset name.
+22. Dagster groups for dbt come from `LayerGroupTranslator` in `assets/dbt.py`: the folder under `models/` (`staging`, `core`, `reporting`), seeds go into `seeds`. Don't set `meta.dagster.group` in the YAML. Not via `+meta` in `dbt_project.yml`: dbt replaces the whole `meta.dagster` dict of a model that sets its own (e.g. `asset_key`). Every new source table needs `meta.dagster.asset_key` matching its Python asset name.
 23. Match the existing SQL style: UPPERCASE keywords, columns qualified with the table name (`stg_receipts.receipt_id`), `WHERE 1=1`, `AS` for every alias, booleans named `is_*`.
 24. If the Starke date conversion has to be written again, use a single macro (DRY) instead of copying the expression.
 
 ### Dagster
 
 25. One asset = one table or one side effect. Declare order with `deps=[...]` and logical grouping with `group_name`.
-   25.1. `@dbt_assets` runs as **one step** (one `dbt build`): anything downstream of any dbt asset waits for the whole build. To depend on a dbt group, filter `dbt_analytics.keys` by `dbt_analytics.group_names_by_key` (see `core_assets` in `assets.py`).
+   25.1. `@dbt_assets` runs as **one step** (one `dbt build`): anything downstream of any dbt asset waits for the whole build. To depend on a dbt group, filter `dbt_analytics.keys` by `dbt_analytics.group_names_by_key` (see `superset_assets` in `assets.py`). Jobs select all dbt assets with `AssetSelection.assets(dbt_analytics)`.
 26. Connect to MSSQL only via `get_mssql_engine(database)`, and write `config.ini` only via `save_config()`.
 27. Access DuckDB only through the `DuckDBResource` parameter (`duckdb.get_connection()` as a context manager). Never open your own connection.
 28. Use `context.log` instead of `print()`, and `subprocess.run(..., check=True)` instead of `os.system` so that failures fail the run.

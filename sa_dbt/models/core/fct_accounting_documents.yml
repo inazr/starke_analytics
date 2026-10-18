@@ -10,7 +10,6 @@ models:
     config:
       meta:
         dagster:
-          group: core
           asset_key: fct_accounting_documents
     columns:
       - name: invoice_id

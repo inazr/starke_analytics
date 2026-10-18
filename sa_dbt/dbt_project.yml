@@ -27,6 +27,11 @@ models:
       +schema: core
       +materialized: table
 
+    # Copied to Superset together with core (SUPERSET_SCHEMAS in sa_dagster/assets/assets.py)
+    reporting:
+      +schema: reporting
+      +materialized: table
+
     staging:
       starke_praxis:
         +schema: stg_starke

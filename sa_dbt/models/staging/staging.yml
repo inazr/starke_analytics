@@ -7,10 +7,6 @@ models:
         data_tests:
           - unique
           - not_null
-    config:
-      meta:
-        dagster:
-          group: staging
 
   - name: stg_appointments
     columns:
@@ -18,10 +14,6 @@ models:
         data_tests:
           - unique
           - not_null
-    config:
-      meta:
-        dagster:
-          group: staging
 
   - name: stg_receipts
     columns:
@@ -29,10 +21,6 @@ models:
         data_tests:
           - unique
           - not_null
-    config:
-      meta:
-        dagster:
-          group: staging
 
   - name: stg_invoices
     columns:
@@ -49,10 +37,6 @@ models:
                 field: receipt_id
               config:
                 severity: warn
-    config:
-      meta:
-        dagster:
-          group: staging
 
   - name: stg_invoice_line_items
     columns:
@@ -60,7 +44,3 @@ models:
         data_tests:
           - unique
           - not_null
-    config:
-      meta:
-        dagster:
-          group: staging

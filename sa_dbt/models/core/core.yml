@@ -5,12 +5,10 @@ models:
     config:
       meta:
         dagster:
-          group: core
           asset_key: fct_receipts_to_appointments
 
   - name: dim_receipts
     config:
       meta:
         dagster:
-          group: core
           asset_key: dim_receipts
