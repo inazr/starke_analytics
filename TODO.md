@@ -76,6 +76,10 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
     33.4. False positives: the hook also blocks harmless commands whose text contains the patterns (e.g. an edit script writing "1433" into `TODO.md`). Workaround: use the Edit tool.
     33.5. **Done (2026-10-18):** Claude Code sandbox on (`.claude/settings.json`): `.env` is unreadable for Claude's Bash (`denyRead`), so Claude can't get the Starke password. Non-secret variables moved to a new `settings.env` (port and paths), which `constants.py` and dbt (`--env-file`) read. Side effect: the sandbox also blocks Bash writes to `.claude/settings.json` and `.claude/hooks/` (partly covers 33.3; the Edit tool can still change them). 33.1–33.4 are still open.
 
+34. **Gaps in the sandbox setup from TODO 33.5** (found by an automated security review, 2026-10-18).
+    34.1. **`.env` is only hidden from Bash, not from Claude's own file tools.** The sandbox `denyRead` applies to Bash commands; the Read/Grep/Edit tools run outside the sandbox and could still open `.env`. Options: add `permissions.deny` rules `Read(./.env)` and `Edit(./.env)` (and `**/.env`) to `.claude/settings.json`; or move the Starke login out of the repo into the macOS Keychain or another secret store Claude can't reach.
+    34.2. **`allowWrite: ~/.cache/uv` lets sandboxed commands write into the shared uv cache** that the owner's own (unsandboxed) runs also use, so a poisoned cache entry could leave the sandbox. Options: a separate cache for Claude (`UV_CACHE_DIR` pointing to a git-ignored project folder, set in `.claude/settings.json` `env`) and drop the `allowWrite`; or `UV_NO_CACHE=1` for Claude (slower); or accept it.
+
 ## Deployment
 
 24. **Docker on Unraid:** needs a Dockerfile/compose file, a volume for `DAGSTER_HOME` and the DuckDB file, and the ODBC driver inside the image.
