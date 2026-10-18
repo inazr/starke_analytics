@@ -46,7 +46,10 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 
 ## dbt / SQL (later)
 
-23. **`fct_accounting_documents` has `total_gross` twice**, once from `stg_invoices` and once from `stg_invoice_line_items`.
+23. **Done (2026-10-18):** `fct_accounting_documents` had `total_gross` twice (DuckDB silently renamed the second to `total_gross_1`). Renamed to `invoice_total_gross` (from `stg_invoices`) and `line_item_total_gross` (from `stg_invoice_line_items`).
+    23.1. **Still open:** the model has one row per line item (2,462 of 3,272 invoices have several lines), so the invoice columns (`invoice_total_gross`, `partial_payment`, `deduction`) repeat on every line and `SUM(invoice_total_gross)` counts each such invoice several times. Fix if needed: split into `fct_invoices` (one row per invoice) and `fct_invoice_line_items`.
+    23.2. Which line sum equals the invoice total, by `invoice_recipient_type`: `K` = sum of `total_gross` (1,615 of 1,920); `Z` = sum of `total_net` (= `total_gross + supplement`, line `total_gross` is 0; 403 of 404; `own_share` does **not** match); `A` and `B` = sum of `total_gross` (all); `P` = nothing matches (17 of 786): the invoice total is a multiple of the line sum (×3.8, ×7.7, ×10), so the line amount is probably a price per session without a quantity column in staging.
+
 28. **Warning `unique_stg_invoices_receipt_id` (253 duplicate values out of 3,272 invoices). The test has been removed (2026-10-17); the findings below stay for the SQL work.** The test assumes one invoice per receipt, but the source data doesn't work that way:
     28.1. **`receipt_id = 0` is a placeholder for "no receipt"** and appears on 305 invoices. 300 of them are cancellation invoices (status `S`/`G`); 5 have status `L`. That alone counts as 1 of the 253.
     28.2. **252 real receipts have 2–3 invoices to different recipients**, with no cancellations involved. Most common sequences: `Z → K` (184), `A → K` (35), `A → P` (12), `A → A → K` (7). Probable meaning, to be confirmed: Z = Zuzahlung (patient co-payment), K = Krankenkasse (statutory insurance), P = Privat, A = Ausfallrechnung (fee for a missed appointment).
