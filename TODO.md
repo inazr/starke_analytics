@@ -38,7 +38,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 17. **Done (2026-10-17):** `check_server_online_status` raises `Failure` with host, port and the hint to run `discover_network`, so the run is Failed (not Canceled) and downstream assets are skipped. `print()`, `run_launcher.terminate` and the global socket timeout are gone.
 18. **Done (2026-10-17):** `create_duckdb_with_schema` now always creates the schema (the flag is gone, see TODO 10).
 19. **Done and tested (2026-10-17):** the database lookup (now in `find_starke_server`) uses `LIKE 'SP9[_]%'` (a plain `_` is a wildcard), sorts by name, and raises `Failure` unless exactly one Starke database is found across all reachable servers. Test run found `100.88.163.113` (Tailscale peer `Tower`) with `SP9_400502848`.
-20. **The password goes into the connection URL as plain text.** Special characters such as `@` or `/` would break the URL; `sqlalchemy.URL.create` would handle that.
+20. **Done (2026-10-18):** `get_mssql_engine` builds the URL with `sqlalchemy.URL.create`, which escapes special characters and prints the password as `***`.
 21. **dagster-dbt can rebuild the dbt manifest by itself** (`prepare_if_dev()`). The `parse_dbt` and `reload_code_location` assets are gone (TODO 15), so this is now only about local development: no manual `dbt parse` after model changes.
 22. **There are no tests:** `sa_dagster_tests/test_assets.py` is empty.
 

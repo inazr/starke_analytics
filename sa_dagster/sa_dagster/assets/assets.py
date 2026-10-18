@@ -34,8 +34,15 @@ def get_mssql_engine(database: str, server: str | None = None) -> sqlalchemy.Eng
     # Default: the server saved by discover_network
     if server is None:
         server = config.get('NETWORK', 'last_known_starke_mssql_server')
-    url = (f'mssql+pyodbc://{STARKE_PRAXIS_USER}:{STARKE_PRAXIS_PASSWORD}@{server}/{database}'
-           '?driver=ODBC+Driver+18+for+SQL+Server')
+    # URL.create escapes special characters and hides the password when printed
+    url = sqlalchemy.URL.create(
+        'mssql+pyodbc',
+        username=STARKE_PRAXIS_USER,
+        password=STARKE_PRAXIS_PASSWORD,
+        host=server,
+        database=database,
+        query={'driver': 'ODBC Driver 18 for SQL Server'},
+    )
     return sqlalchemy.create_engine(url, connect_args={"TrustServerCertificate": "yes"})
 
 
