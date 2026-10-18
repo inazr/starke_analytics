@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: rep_employee_stats
+    description: One row per month and employee. Employees without salary rows (e.g. the owners) have an empty actual_salary.
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "report_month || '-' || employee_short"
+    columns:
+      - name: report_month
+        description: First day of the month.
+        data_tests:
+          - not_null
+      - name: employee_short
+        description: Employee short code (Starke MIT_Kurzname).
+        data_tests:
+          - not_null
+      - name: actual_salary
+        description: Salary actually paid for that month (seed employee_payments).
+      - name: appointments_count
+        description: Therapy sessions done (not cancelled, not in the future).
+      - name: revenue_gross
+        description: Sum of the gross value (Brutto) of those sessions.

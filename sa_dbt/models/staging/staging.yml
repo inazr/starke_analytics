@@ -44,3 +44,16 @@ models:
         data_tests:
           - unique
           - not_null
+
+  - name: stg_employee_payments
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "payment_month || '-' || employee_short"
+    columns:
+      - name: payment_month
+        data_tests:
+          - not_null
+      - name: employee_short
+        data_tests:
+          - not_null

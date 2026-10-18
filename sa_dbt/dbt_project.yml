@@ -36,3 +36,6 @@ models:
       starke_praxis:
         +schema: stg_starke
         +tags: stg_starke
+      # Hand-maintained CSV seeds (seeds/), not from Starke
+      seeds:
+        +schema: stg_seeds

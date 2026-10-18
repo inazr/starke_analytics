@@ -43,7 +43,8 @@ The owner must be able to read and understand every line. Simple beats clever.
    11.3. `models/core/`: `fct_*` / `dim_*` tables (materialized as `table`).
    11.4. `macros/generate_schema_name.sql`: on target `prod`, models go to their custom schema (`stg_starke`, `core`). On any other target, **everything goes into the target schema** (`dbt_dev`).
    11.5. dbt behaviour flags live under `flags:` in `dbt_project.yml`, not in `profiles.yml`.
-   11.6. `models/reporting/` (planned, empty): models on top of core for Superset, schema `reporting`, copied to Superset together with `core`.
+   11.6. `models/reporting/`: `rep_*` tables on top of core for Superset (e.g. `rep_employee_stats`), schema `reporting`, copied to Superset together with `core`.
+   11.7. `models/staging/seeds/`: `stg_*` models over the hand-maintained CSV seeds in `seeds/` (e.g. `employee_payments` → `stg_employee_payments`), schema `stg_seeds`.
 
 ### Domain quirks
 
