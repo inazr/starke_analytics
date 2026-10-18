@@ -1,5 +1,5 @@
 [NETWORK]
-allowed_servers = Tower
+allowed_tailscale_node_ids = <Tailscale node ID of the Starke server, from tailscale status --json>
 last_known_starke_mssql_server = 10.0.0.1
 
 [STARKE_PRAXIS]

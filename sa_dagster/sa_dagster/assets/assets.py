@@ -53,9 +53,10 @@ def load_starke_table(duckdb: DuckDBResource, table_name: str, query: str) -> No
 
 
 def get_allowed_tailscale_ips(context: AssetExecutionContext) -> list[str]:
-    """IPv4 addresses of the online Tailscale peers whose HostName is in allowed_servers (config.ini)."""
-    # Only allowlisted hosts get the Starke login; never scan the LAN, any device there could open port 1433
-    allowed = [name.strip().lower() for name in config.get('NETWORK', 'allowed_servers').split(',')]
+    """IPv4 addresses of the online Tailscale peers whose node ID is in allowed_tailscale_node_ids (config.ini)."""
+    # Only allowlisted hosts get the Starke login; never scan the LAN, any device there could open port 1433.
+    # Match the node ID, not the HostName: any device in the tailnet can rename itself, but not change its ID.
+    allowed = [node_id.strip() for node_id in config.get('NETWORK', 'allowed_tailscale_node_ids').split(',')]
 
     if shutil.which('tailscale') is None:
         raise Failure('tailscale command not found. Install Tailscale or set the server in config.ini by hand.')
@@ -63,12 +64,12 @@ def get_allowed_tailscale_ips(context: AssetExecutionContext) -> list[str]:
     result = subprocess.run(['tailscale', 'status', '--json'], capture_output=True, text=True, check=True)
     peers = json.loads(result.stdout).get('Peer') or {}
 
-    ips = [peer['TailscaleIPs'][0]  # IPv4 first, then IPv6
-           for peer in peers.values()
-           if peer['HostName'].lower() in allowed
-           and peer['Online']
-           and not peer.get('ShareeNode')]  # shared in from another tailnet
-    context.log.info(f'Online allowlisted Tailscale peers {allowed}: {ips}')
+    allowed_peers = [peer for peer in peers.values()
+                     if peer['ID'] in allowed
+                     and peer['Online']
+                     and not peer.get('ShareeNode')]  # shared in from another tailnet
+    ips = [peer['TailscaleIPs'][0] for peer in allowed_peers]  # IPv4 first, then IPv6
+    context.log.info(f'Online allowlisted Tailscale peers: {[(peer["HostName"], ip) for peer, ip in zip(allowed_peers, ips)]}')
     return ips
 
 
@@ -113,7 +114,7 @@ def find_starke_server(context: AssetExecutionContext) -> None:
 
     if len(found) != 1:
         raise Failure(f'Expected exactly one Starke database (SP9_...) on the allowlisted servers, found: {found}. '
-                      f'Check allowed_servers, or set last_known_starke_mssql_server and database in config.ini by hand.')
+                      f'Check allowed_tailscale_node_ids (IDs: tailscale status --json), or set last_known_starke_mssql_server and database in config.ini by hand.')
 
     server, database = found[0]
     config.set('NETWORK', 'last_known_starke_mssql_server', server)

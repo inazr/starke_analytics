@@ -58,7 +58,9 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
     30.2. Option: keep the full copy and only expose `core` in Superset (dataset permissions).
     30.3. Option: also restrict the file permissions of `SUPERSET_DUCKDB_PATH`.
 
-31. **Done (2026-10-17):** discovery only logs in to online Tailscale peers whose `HostName` is in `allowed_servers` (`config.ini`, comma-separated, case-insensitive), skipping shared-in peers. The LAN scan and `get_local_ip` were removed. Before, the Starke login went to every host with port 1433 open (found by an automated security review).
+31. **Done (2026-10-17):** discovery only logs in to online Tailscale peers on an allowlist in `config.ini` (since TODO 32: node IDs), skipping shared-in peers. The LAN scan and `get_local_ip` were removed. Before, the Starke login went to every host with port 1433 open (found by an automated security review).
+
+32. **Done (2026-10-18):** the allowlist matches the Tailscale node `ID` (`allowed_tailscale_node_ids` in `config.ini`; `Tower` = `nBmu8w3x6h11CNTRL`) instead of the self-chosen `HostName` (found by an automated security review). Must be updated if `Tower` is re-registered in Tailscale. Still possible later: TLS certificate validation (`TrustServerCertificate=no`).
 
 ## Deployment
 
