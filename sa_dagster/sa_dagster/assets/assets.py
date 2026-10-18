@@ -493,7 +493,7 @@ SUPERSET_SCHEMAS = ["core", "reporting"]
 superset_assets = [key for key in dbt_analytics.keys if dbt_analytics.group_names_by_key[key] in SUPERSET_SCHEMAS]
 
 
-# deps only draw the lineage: the sensor in sensors/__init__.py starts this copy after a successful dbt run
+# deps only draw the lineage: the copy runs in its own job copy_for_superset
 @asset(deps=superset_assets, group_name="superset")
 def copy_duckdb_for_superset(duckdb: DuckDBResource) -> None:
     # Superset reads its own copy, because DuckDB allows one writer or several readers, never both.

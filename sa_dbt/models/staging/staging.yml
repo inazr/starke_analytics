@@ -33,7 +33,7 @@ models:
           - not_null
       - name: receipt_id
         data_tests:
-          # Receipts should never be deleted in Starke, but 7 invoices point to missing ones (TODO 28.7)
+          # Receipts should never be deleted in Starke, but 7 invoices point to missing ones
           - relationships:
               arguments:
                 to: ref('stg_receipts')

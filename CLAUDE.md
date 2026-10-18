@@ -15,18 +15,17 @@ The owner must be able to read and understand every line. Simple beats clever.
 ## Communication
 
 6. When returning a list, number the items instead of using "-" bullets. **Numbers must be unique across the whole reply or document**: never restart at 1 in a new section, keep counting. Nested points use the parent number (8.1, 8.2). The owner references items by number ("fix 3").
-7. **Never fix anything on your own that is a design decision.** Diagnose (read-only checks are fine), write the finding into `TODO.md` with options, and only change what the owner explicitly names.
+7. **Never fix anything on your own that is a design decision.** Diagnose (read-only checks are fine), report the finding to the owner with options, and only change what the owner explicitly names.
 8. One topic at a time, and be specific: give the full name and path ("Microsoft ODBC Driver 18 for SQL Server, `/opt/homebrew/lib/libmsodbcsql.18.dylib`"), not "the driver".
    8.1. **Keep answers short.** Answer the question asked in a few sentences first. No long background, no repeated context, no extra sections.
-   8.2. **After a change, report only what the owner needs:** decisions to make, failures, surprises, or something the owner must do. No list of routine edits (docs updated, TODO marked done, validation passed).
-   8.3. **TODO rounds:** start the reply header with `TODO n/total` (total = highest number in `TODO.md`, e.g. `TODO 21/32`). When a TODO is finished, update `TODO.md`/CLAUDE.md and **commit automatically** (one commit per TODO).
-   8.4. **Automated security review findings** (background notices after a commit) go into `TODO.md` as a new item with options; they are design decisions, not auto-fixes.
+   8.2. **After a change, report only what the owner needs:** decisions to make, failures, surprises, or something the owner must do. No list of routine edits (docs updated, validation passed).
+   8.3. **Automated security review findings** (background notices after a commit) are reported to the owner with options; they are design decisions, not auto-fixes.
 
 ## Architecture
 
 9. ELT pipeline for a physiotherapy practice:
    `Starke Praxis (MSSQL, LAN) → Dagster assets (pandas) → DuckDB raw_starke.* → dbt → DuckDB stg_starke.* / core.* → Superset`
-   9.1. **Superset** (separate, not in this repo) reads its **own copy** of `duckdb/starke_praxis.duckdb`. The asset `copy_duckdb_for_superset` builds a new DuckDB file at `SUPERSET_DUCKDB_PATH` (`settings.env`) after dbt finishes, so Superset never opens the file Dagster writes to. The copy holds only the schemas in `SUPERSET_SCHEMAS` (`core`, `reporting`, in `assets.py`): every table in them, so new models are included automatically.
+   9.1. **Superset** (separate, not in this repo) reads its **own copy** of `duckdb/starke_praxis.duckdb`. The asset `copy_duckdb_for_superset` (job `copy_for_superset`, started by hand) builds a new DuckDB file at `SUPERSET_DUCKDB_PATH` (`settings.env`), so Superset never opens the file Dagster writes to. The copy holds only the schemas in `SUPERSET_SCHEMAS` (`core`, `reporting`, in `assets.py`): every table in them, so new models are included automatically.
    9.2. **Target platform: Docker on Unraid.** `rpi/setup` is the old Raspberry Pi setup.
    9.3. Schedule `extract_and_transform_schedule` (`schedules/__init__.py`) runs job `extract_and_transform` every 4 hours (00, 04, ..., 20 Europe/Berlin). It is on by default, so it also runs under a local `dg dev` while the daemon is up.
    9.4. One Python project for the whole repo: root `pyproject.toml` + `uv.lock` (Python 3.13), venv in root `.venv`. Dagster and dbt share it.
@@ -36,7 +35,7 @@ The owner must be able to read and understand every line. Simple beats clever.
    10.3. `assets/constants.py` loads two git-ignored files from the repo root via `python-dotenv`: `settings.env` (no secrets: `STARKE_PRAXIS_PORT`, `CONFIG_FILE_PATH`, `DUCKDB_PATH`, `SUPERSET_DUCKDB_PATH`, all paths absolute) and `.env` (only the Starke login: `STARKE_PRAXIS_USER`, `STARKE_PRAXIS_PASSWORD`). Templates: `settings.env.example`, `.env.example`. `DUCKDB_PATH` is passed to `DuckDBResource` as `EnvVar("DUCKDB_PATH")`. Only `sa_dbt/` is derived from the repo location.
    10.6. **Claude's Bash runs in the Claude Code sandbox** (`.claude/settings.json`): `.env` is unreadable for Claude (`denyRead`), `~/.cache/uv` is writable for `uv run`. Everything Claude needs for dbt and `dg check defs` is in `settings.env`.
    10.4. Runtime state (Tailscale node ID allowlist, server IP, DB name) is stored in root `config.ini` (git-ignored; template: `config.ini.example`). It is not passed between assets.
-   10.5. `jobs/__init__.py`: `discover_network` (run by hand on first setup or a new network), `extract_and_transform` (extraction + dbt; started every 4 hours by the schedule, see 9.3) and `copy_for_superset` (only the Superset copy). The run status sensor `copy_for_superset_after_dbt` (`sensors/__init__.py`) starts `copy_for_superset` after every successful run that included dbt assets (job or manual materialize). There are no self-updating assets: code updates (`git pull`, `uv sync`, `dbt parse`) are a deployment step (new image).
+   10.5. `jobs/__init__.py`: `discover_network` (run by hand on first setup or a new network), `extract_and_transform` (extraction + dbt; started every 4 hours by the schedule, see 9.3) and `copy_for_superset` (only the Superset copy). There are no self-updating assets: code updates (`git pull`, `uv sync`, `dbt parse`) are a deployment step (new image).
 11. **`sa_dbt/`** – Transformations on DuckDB (`duckdb/starke_praxis.duckdb`).
    11.1. `models/source/starke_praxis.yml`: sources with `meta.dagster.asset_key` matching the Python asset names. This is what links Python and dbt lineage in Dagster.
    11.2. `models/staging/starke_praxis/stg_*.sql`: rename German source columns to English snake_case, cast types, and convert Starke dates.
@@ -79,7 +78,7 @@ uv run pytest sa_dagster/sa_dagster_tests         # tests (currently empty)
 uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single test
 
 # First run / new network: run job `discover_network` (writes server IP + DB name to config.ini)
-# Test run: run job `extract_and_transform` (extraction + dbt); the sensor then starts job `copy_for_superset`.
+# Test run: run job `extract_and_transform` (extraction + dbt), then job `copy_for_superset`.
 
 # Inspect data read-only (only while Dagster isn't writing)
 .venv/bin/python -c "import duckdb; print(duckdb.connect('duckdb/starke_praxis.duckdb', read_only=True).sql('SELECT ...'))"
@@ -128,7 +127,3 @@ uv run pytest sa_dagster/sa_dagster_tests/test_assets.py::test_name   # single t
 37. **macOS Local Network permission:** without it, connections to local addresses fail silently in a few milliseconds (seen with the old LAN scan). Allow the IDE/terminal under System Settings → Privacy & Security → Local Network, then **restart Dagster**.
 38. **Login timeout to MSSQL** usually means the wrong IP in `config.ini`. The Starke server is reached via Tailscale (`Tower`, node ID `nBmu8w3x6h11CNTRL`, `100.88.163.113`), not the LAN. Run `discover_network` again; it fails with a list of what it found instead of saving a wrong IP.
    38.1. **Host answers ping but port 1433 is closed** (`nc -z -G 2 <ip> 1433`): the SQL Server service is stopped (seen in the evening). Wait instead of rescanning the network.
-
-## Open points
-
-39. All known issues and pending decisions are in `TODO.md` (numbered; the owner references them as "TODO n"). Add new findings there instead of fixing them.

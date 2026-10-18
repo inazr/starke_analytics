@@ -14,7 +14,7 @@ runs_code='(python|uv run|(^|[ ;&|])(nc|ncat|telnet|sqlcmd|bcp|isql|dg|dagster|c
 starke='(get_mssql_engine|load_starke_table|find_starke_server|check_server_online_status|mssql|pyodbc|1433|100\.88\.163\.113|dg launch|job execute|asset materialize|materialize\()'
 
 if echo "$command" | grep -Eq "$runs_code" && echo "$command" | grep -Eiq "$starke"; then
-  echo "Blocked: Claude must never connect to the live Starke SQL Server (owner rule, 2026-10-18). Use the DuckDB copy read-only, or write the question into TODO.md for the owner." >&2
+  echo "Blocked: Claude must never connect to the live Starke SQL Server (owner rule, 2026-10-18). Use the DuckDB copy read-only, or ask the owner." >&2
   exit 2
 fi
 exit 0

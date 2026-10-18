@@ -3,7 +3,7 @@ from dagster import define_asset_job, AssetSelection
 from ..assets.dbt import dbt_analytics
 
 # Extract from Starke, then all dbt assets (every layer group, see assets/dbt.py).
-# The Superset copy is its own job, started by the sensor in sensors/__init__.py.
+# The Superset copy is its own job, started by hand.
 # Group names: assets.py
 extract_and_transform = AssetSelection.groups(
     "extraction_entry_point", "extract_from_starke"
