@@ -2,6 +2,11 @@
 # PreToolUse hook: stop Claude from connecting to the live Starke SQL Server.
 # Only the Dagster pipeline, started by the owner, may talk to it. Claude uses the DuckDB copy.
 command=$(jq -r '.tool_input.command // empty')
+# Fail closed: if jq fails or finds no command, don't let the command through unchecked
+if [ -z "$command" ]; then
+  echo "Blocked: the Starke hook could not read the command." >&2
+  exit 2
+fi
 
 # Only commands that can open a connection (not grep/cat/sed reading the code)
 runs_code='(python|uv run|(^|[ ;&|])(nc|ncat|telnet|sqlcmd|bcp|isql|dg|dagster|curl) )'
