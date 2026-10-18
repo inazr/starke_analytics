@@ -78,7 +78,7 @@ Collected while getting the pipeline to run. Nothing here gets fixed until you p
 
 34. **Gaps in the sandbox setup from TODO 33.5** (found by an automated security review, 2026-10-18).
     34.1. **Done (2026-10-18):** `permissions.deny` `Read(./.env)` and `Edit(./.env)` in `.claude/settings.json` (not tested by reading `.env`, on purpose). Was: **`.env` is only hidden from Bash, not from Claude's own file tools.** The sandbox `denyRead` applies to Bash commands; the Read/Grep/Edit tools run outside the sandbox and could still open `.env`. Options: add `permissions.deny` rules `Read(./.env)` and `Edit(./.env)` (and `**/.env`) to `.claude/settings.json`; or move the Starke login out of the repo into the macOS Keychain or another secret store Claude can't reach.
-    34.2. **`allowWrite: ~/.cache/uv` lets sandboxed commands write into the shared uv cache** that the owner's own (unsandboxed) runs also use, so a poisoned cache entry could leave the sandbox. Options: a separate cache for Claude (`UV_CACHE_DIR` pointing to a git-ignored project folder, set in `.claude/settings.json` `env`) and drop the `allowWrite`; or `UV_NO_CACHE=1` for Claude (slower); or accept it.
+    34.2. **Accepted (2026-10-18):** the shared uv cache stays writable for Claude's sandbox. Was: **`allowWrite: ~/.cache/uv` lets sandboxed commands write into the shared uv cache** that the owner's own (unsandboxed) runs also use, so a poisoned cache entry could leave the sandbox. Options: a separate cache for Claude (`UV_CACHE_DIR` pointing to a git-ignored project folder, set in `.claude/settings.json` `env`) and drop the `allowWrite`; or `UV_NO_CACHE=1` for Claude (slower); or accept it.
 
 ## Deployment
 
