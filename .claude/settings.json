@@ -13,6 +13,9 @@
       }
     ]
   },
+  "permissions": {
+    "deny": ["Read(./.env)", "Edit(./.env)"]
+  },
   "sandbox": {
     "enabled": true,
     "filesystem": {
