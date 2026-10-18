@@ -12,7 +12,7 @@ import pandas as pd
 from dagster_duckdb import DuckDBResource
 
 from .constants import (STARKE_PRAXIS_PORT, STARKE_PRAXIS_USER, STARKE_PRAXIS_PASSWORD, CONFIG_FILE_PATH,
-                        DUCKDB_PATH, SUPERSET_DUCKDB_PATH)
+                        SUPERSET_DUCKDB_PATH)
 from .dbt import dbt_analytics
 
 config = configparser.ConfigParser()
@@ -494,13 +494,29 @@ core_assets = [key for key in dbt_analytics.keys if dbt_analytics.group_names_by
 
 @asset(deps=core_assets, group_name="superset")
 def copy_duckdb_for_superset(duckdb: DuckDBResource) -> None:
-    # Superset reads its own copy, because DuckDB allows one writer or several readers, never both
-    with duckdb.get_connection() as conn:
-        # Write everything from the .wal file into the main file, so the copy is complete
-        conn.execute("CHECKPOINT;")
-
+    # Superset reads its own copy, because DuckDB allows one writer or several readers, never both.
+    # The copy only holds core: raw_starke and stg_starke are not meant for Superset.
     os.makedirs(os.path.dirname(SUPERSET_DUCKDB_PATH), exist_ok=True)
     tmp_path = SUPERSET_DUCKDB_PATH + '.tmp'
-    shutil.copy2(DUCKDB_PATH, tmp_path)
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)  # left over from a failed run
+
+    with duckdb.get_connection() as conn:
+        conn.execute(f"ATTACH '{tmp_path}' AS superset_copy;")
+        conn.execute("CREATE SCHEMA superset_copy.core;")
+        # Every table in core, so a new core model is copied without changing this code
+        core_tables = conn.execute("""
+                                   SELECT tables.table_name
+                                   FROM   information_schema.tables AS tables
+                                   WHERE  1=1
+                                     AND  tables.table_catalog = current_database()
+                                     AND  tables.table_schema = 'core'
+                                   ;
+                                   """).fetchall()
+        for (table_name,) in core_tables:
+            conn.execute(f'CREATE TABLE superset_copy.core."{table_name}" AS SELECT * FROM core."{table_name}";')
+        # DETACH writes everything into the file, so no .wal file is left behind
+        conn.execute("DETACH superset_copy;")
+
     # Atomic rename: Superset never sees a half-copied file
     os.replace(tmp_path, SUPERSET_DUCKDB_PATH)
