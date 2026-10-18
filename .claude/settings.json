@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block_live_starke.sh",
+            "onFailure": "block"
+          }
+        ]
+      }
+    ]
+  },
+  "autoMode": {
+    "hard_deny": [
+      "$defaults",
+      "Never connect to the live Starke Praxis SQL Server (MSSQL, port 1433, Tailscale host Tower / 100.88.163.113), not even read-only: no get_mssql_engine, pyodbc, sqlcmd, nc/port checks, or launching Dagster jobs/materializations. Only the owner runs the pipeline; Claude uses the DuckDB copy."
+    ]
+  }
+}
