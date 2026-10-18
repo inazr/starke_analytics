@@ -40,6 +40,15 @@ models:
         data_tests:
           - unique
           - not_null
+      - name: receipt_id
+        data_tests:
+          # Receipts should never be deleted in Starke, but 7 invoices point to missing ones (TODO 28.7)
+          - relationships:
+              arguments:
+                to: ref('stg_receipts')
+                field: receipt_id
+              config:
+                severity: warn
     config:
       meta:
         dagster:

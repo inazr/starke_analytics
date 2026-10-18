@@ -3,7 +3,7 @@ SELECT
         raw_invoices.Nummer AS invoice_number,
         NULLIF(raw_invoices.StornoNummer, '') AS cancellation_invoice_number,
         raw_invoices.Nachberechnung::BOOLEAN AS subsequent_billing,
-        raw_invoices.REZ_Nr AS receipt_id,
+        NULLIF(raw_invoices.REZ_Nr, 0) AS receipt_id, -- 0 = invoice without a receipt (valid, rare)
         raw_invoices.SEN_Nr AS delivery_id,
         DATE '1801-01-01' + to_days(raw_invoices.Datum::INT) AS invoice_date,
         DATE '1801-01-01' + to_days(raw_invoices.Von::INT) AS invoice_valid_from,
