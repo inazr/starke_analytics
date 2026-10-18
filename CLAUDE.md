@@ -26,7 +26,7 @@ The owner must be able to read and understand every line. Simple beats clever.
 9. ELT pipeline for a physiotherapy practice:
    `Starke Praxis (MSSQL, LAN) → Dagster assets (pandas) → DuckDB raw_starke.* → dbt → DuckDB stg_starke.* / core.* → Superset`
    9.1. **Superset** (separate, not in this repo) reads its **own copy** of `duckdb/starke_praxis.duckdb`. The asset `copy_duckdb_for_superset` (job `copy_for_superset`, started by hand) builds a new DuckDB file at `SUPERSET_DUCKDB_PATH` (`settings.env`), so Superset never opens the file Dagster writes to. The copy holds only the schemas in `SUPERSET_SCHEMAS` (`core`, `reporting`, in `assets.py`): every table in them, so new models are included automatically.
-   9.2. **Target platform: Docker on Unraid.** `rpi/setup` is the old Raspberry Pi setup.
+   9.2. **Target platform: Docker on Unraid.**
    9.3. Schedule `extract_and_transform_schedule` (`schedules/__init__.py`) runs job `extract_and_transform` every 4 hours (00, 04, ..., 20 Europe/Berlin). It is on by default, so it also runs under a local `dg dev` while the daemon is up.
    9.4. One Python project for the whole repo: root `pyproject.toml` + `uv.lock` (Python 3.13), venv in root `.venv`. Dagster and dbt share it.
 10. **`sa_dagster/`** – Orchestration. Dagster loads `sa_dagster.sa_dagster` (set in `[tool.dg.project]` in `pyproject.toml`, together with the code location name `sa_dagster`); its `__init__.py` builds the `Definitions` object (assets, jobs, resources). `sa_dagster/` is also `DAGSTER_HOME`: `dagster.yaml` plus the run history Dagster writes there (`history/`, `schedules/`, `storage/`, all git-ignored).
